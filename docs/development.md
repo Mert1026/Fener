@@ -4,7 +4,9 @@ Requires Python 3.12+, uv 0.11.7, Node 24 with npm and Docker Compose with the L
 
 ## First start
 
-Run `python scripts/manage.py setup`, then `python scripts/manage.py dev` from the repository. Setup is safe to repeat: it preserves your `.env`, creates `.data`, installs dependencies and applies forward migrations. No default administration password is committed. Find the generated `FENER_ADMIN_KEY` in your local `.env` and enter it in Settings to unlock private views. Do not paste keys into issues, screenshots or chats.
+Run `python scripts/manage.py setup`, then `python scripts/manage.py dev` from the repository. Setup is safe to repeat: it preserves your `.env`, creates `.data`, installs dependencies and applies forward migrations. New installations receive unique generated database and administration credentials; no shared password fallback is committed. Find the generated `FENER_ADMIN_KEY` in your local `.env` and enter it in Settings to unlock private views. Do not paste keys into issues, screenshots or chats. Do not copy the blank example as a working environment; let setup generate it.
+
+For an existing local PostgreSQL installation that reused the old committed development password, stop the API/worker, run `python scripts/manage.py backup --docker`, then `uv run python scripts/rotate_db_password.py`. This updates the database role and matching `.env` credentials without recreating the volume or changing other keys. Run `docker compose up -d --wait db` and restart Fener afterward. Merely editing `.env` does not change an initialized PostgreSQL password.
 
 The root shortcuts `npm run setup` and `npm start` run the same commands through uv, so manual virtual-environment activation is unnecessary. `npm start` launches the local API, web and worker; `npm run dev` launches only the web. Dependencies still use pnpm and uv, not `npm install`. Keep Docker Desktop and the configured database running; restart a stopped database with `docker compose up -d --wait db` before launching the app. Do not launch a second stack over services already using ports 3000 and 8000.
 

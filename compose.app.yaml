@@ -7,7 +7,7 @@ services:
       context: .
       dockerfile: infra/api.Dockerfile
     environment:
-      DATABASE_URL: postgresql+psycopg://fener:${POSTGRES_PASSWORD:-fener_local}@db:5432/fener
+      DATABASE_URL: postgresql+psycopg://fener:${POSTGRES_PASSWORD:?Set the local database password}@db:5432/fener
     command: ["alembic", "upgrade", "head"]
     depends_on:
       db:
@@ -18,7 +18,7 @@ services:
       dockerfile: infra/api.Dockerfile
     env_file: .env
     environment:
-      DATABASE_URL: postgresql+psycopg://fener:${POSTGRES_PASSWORD:-fener_local}@db:5432/fener
+      DATABASE_URL: postgresql+psycopg://fener:${POSTGRES_PASSWORD:?Set the local database password}@db:5432/fener
     ports: ["127.0.0.1:8000:8000"]
     volumes: ["snapshots:/app/.data/snapshots"]
     depends_on:
@@ -41,7 +41,7 @@ services:
       dockerfile: infra/api.Dockerfile
     env_file: .env
     environment:
-      DATABASE_URL: postgresql+psycopg://fener:${POSTGRES_PASSWORD:-fener_local}@db:5432/fener
+      DATABASE_URL: postgresql+psycopg://fener:${POSTGRES_PASSWORD:?Set the local database password}@db:5432/fener
     command: ["fener", "worker"]
     volumes: ["snapshots:/app/.data/snapshots"]
     depends_on:

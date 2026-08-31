@@ -7,22 +7,25 @@ permissions:
 jobs:
   backend:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:17.9-alpine
-        env:
-          POSTGRES_USER: fener
-          POSTGRES_PASSWORD: ci_only
-          POSTGRES_DB: fener
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd "pg_isready -U fener -d fener"
-          --health-interval 5s --health-timeout 5s --health-retries 10
-    env:
-      DATABASE_URL: postgresql+psycopg://fener:ci_only@localhost:5432/fener
-      FENER_TEST_POSTGRES_URL: postgresql+psycopg://fener:ci_only@localhost:5432/fener
     steps:
       - uses: actions/checkout@v4
+      - name: Generate a disposable database credential
+        shell: python
+        run: |
+          import os, secrets
+          password = secrets.token_hex(32)
+          print(f"::add-mask::{password}")
+          url = f"postgresql+psycopg://fener:{password}@localhost:5432/fener"
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as file:
+              file.write(f"POSTGRES_PASSWORD={password}\nDATABASE_URL={url}\nFENER_TEST_POSTGRES_URL={url}\n")
+      - name: Start isolated PostgreSQL
+        run: |
+          docker run -d --name fener-ci-db -p 127.0.0.1:5432:5432 -e POSTGRES_USER=fener -e POSTGRES_DB=fener -e POSTGRES_PASSWORD postgres:17.9-alpine
+          for attempt in {1..30}; do
+            if docker exec fener-ci-db pg_isready -U fener -d fener; then exit 0; fi
+            sleep 2
+          done
+          exit 1
       - uses: astral-sh/setup-uv@v6
         with:
           version: "0.11.7"
@@ -35,6 +38,9 @@ jobs:
       - run: uv run alembic check
       - run: uv run pytest -q --cov=fener --cov-report=term-missing
       - run: uv run python scripts/schema.py --check
+      - name: Stop disposable PostgreSQL
+        if: always()
+        run: docker rm -f fener-ci-db
   web:
     runs-on: ubuntu-latest
     steps:

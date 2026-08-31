@@ -7,7 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
-    database_url: str = "postgresql+psycopg://fener:fener_local@localhost:5432/fener"
+    database_url: str = "postgresql+psycopg://fener@localhost:5432/fener"
     fener_admin_key: SecretStr = SecretStr("")
     fener_app_mode: str = "private"
     fener_snapshot_dir: Path = Path(".data/snapshots")

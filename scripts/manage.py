@@ -36,17 +36,23 @@ def run(*args: str, **kwargs):
     return subprocess.run(resolve_command(list(args)), check=True, **kwargs)
 
 
+def local_environment(template: str, sqlite: bool) -> str:
+    password = secrets.token_hex(32)
+    database = (
+        "sqlite:///.data/fener.db"
+        if sqlite
+        else f"postgresql+psycopg://fener:{password}@localhost:5432/fener"
+    )
+    return (
+        template.replace("DATABASE_URL=\n", f"DATABASE_URL={database}\n")
+        .replace("POSTGRES_PASSWORD=\n", f"POSTGRES_PASSWORD={password}\n")
+        .replace("FENER_ADMIN_KEY=\n", f"FENER_ADMIN_KEY={secrets.token_urlsafe(36)}\n")
+    )
+
+
 def initialize(sqlite: bool):
     if not Path(".env").exists():
-        content = Path(".env.example").read_text(encoding="utf-8")
-        content = content.replace(
-            "FENER_ADMIN_KEY=\n", f"FENER_ADMIN_KEY={secrets.token_urlsafe(36)}\n"
-        )
-        if sqlite:
-            content = content.replace(
-                "postgresql+psycopg://fener:fener_local@localhost:5432/fener",
-                "sqlite:///.data/fener.db",
-            )
+        content = local_environment(Path(".env.example").read_text(encoding="utf-8"), sqlite)
         with Path(".env").open("x", encoding="utf-8") as file:
             file.write(content)
         if os.name != "nt":
@@ -109,7 +115,9 @@ def main():
             for command in resolved_commands:
                 processes.append(subprocess.Popen(command))
             print("Fener: http://127.0.0.1:3000 · API: http://127.0.0.1:8000/docs")
-            print("Worker enabled. Ctrl+C stops these services; no inference APIs are called.")
+            print(
+                "Worker enabled. Ctrl+C stops these services. AI research only runs with manual approval."
+            )
             while all(p.poll() is None for p in processes):
                 try:
                     processes[0].wait(timeout=1)

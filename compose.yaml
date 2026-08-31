@@ -4,7 +4,7 @@ services:
     environment:
       POSTGRES_DB: fener
       POSTGRES_USER: fener
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fener_local}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run npm run setup to generate a local database password}
     ports:
       - "127.0.0.1:${FENER_POSTGRES_PORT:-5432}:5432"
     volumes:
