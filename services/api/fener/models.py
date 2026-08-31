@@ -40,6 +40,10 @@ class Model(Base):
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     identity_key: Mapped[str] = mapped_column(String(800), unique=True)
     name: Mapped[str] = mapped_column(String(500), index=True)
+    family: Mapped[str | None] = mapped_column(String(300), index=True)
+    context_window: Mapped[int | None]
+    open_weights: Mapped[bool | None]
+    release_date: Mapped[str | None] = mapped_column(String(40))
     publisher_id: Mapped[str | None] = mapped_column(ForeignKey("organizations.id"), index=True)
     identity_status: Mapped[str] = mapped_column(String(30), default="unresolved")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
@@ -125,6 +129,13 @@ class Deployment(Base):
     api_model_id: Mapped[str] = mapped_column(String(800))
     variant: Mapped[str] = mapped_column(String(500), default="default")
     listing_kind: Mapped[str] = mapped_column(String(40), default="deployment")
+    context_window: Mapped[int | None]
+    max_output: Mapped[int | None]
+    tool_calling: Mapped[bool | None]
+    structured_output: Mapped[bool | None]
+    image_input: Mapped[bool | None]
+    reasoning: Mapped[bool | None]
+    availability: Mapped[str | None] = mapped_column(String(40))
     __table_args__ = (UniqueConstraint("access_provider_id", "api_model_id", "variant"),)
 
 

@@ -1,0 +1,1 @@
+{"models":[{"id":"claude-4-sonnet","name":"Claude 4 Sonnet","organization":{"id":"anthropic","name":"Anthropic"},"providers":[{"provider_name":"Anthropic","input_price_per_m":3}],"top_scores":{"code":94.2}}],"next_cursor":null,"total":1}
