@@ -1,3 +1,34 @@
+# Fener: secrets, private data and generated artifacts
+.env.*
+!.env.example
+*.pem
+*.key
+credentials*.json
+.secrets/
+.data/
+raw_snapshots/
+backups/
+private/
+*.db
+*.db-*
+*.sqlite*
+*.dump
+node_modules/
+.pnpm-store/
+.next/
+out/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+next-env.d.ts
+.tools/
+.tmp/
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -14,7 +45,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
 lib64/
 parts/
 sdist/
