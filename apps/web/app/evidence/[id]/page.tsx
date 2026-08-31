@@ -12,6 +12,7 @@ import {
 } from "@/components/ui";
 type Record = {
   field: string;
+  external_id: string;
   normalized_value: unknown;
   raw_record: unknown;
   source: string;
@@ -56,6 +57,9 @@ export default function EvidencePage({
         </section>
         <section className="panel settings-panel">
           <h2>Original source record</h2>
+          <p>
+            Source identifier: <span className="mono">{data.external_id}</span>
+          </p>
           <p>
             Snapshot reference: <span className="mono">{data.snapshot_id}</span>
             . The content-addressed original response is retained in local

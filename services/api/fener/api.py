@@ -339,6 +339,9 @@ def observation(observation_id: str, session: DB) -> dict[str, Any]:
     return {
         "id": fact.id,
         "field": fact.field,
+        "entity_type": fact.entity_type,
+        "entity_id": fact.entity_id,
+        "external_id": record.external_id,
         "normalized_value": fact.value,
         "raw_record": record.raw,
         "source": record.source_id,

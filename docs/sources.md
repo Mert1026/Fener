@@ -33,3 +33,7 @@ Raw bytes and HTTP receipts are persisted before validation. Source normalizatio
 ## Adding an official adapter
 
 Inspect the publisher's current API/schema, authentication, quota and terms. Add a registry entry and allowlisted host, typed pure normalizer, small attributed fixtures and failure tests. State exactly which facts the publisher is authoritative for. Reuse transport/evidence persistence. Do not add HTML scraping or arbitrary user-provided URLs by default.
+
+### Additional benchmark access
+
+OpenRouter also documents an authenticated [unified benchmark endpoint](https://openrouter.ai/docs/api/api-reference/benchmarks/list-benchmarks). A public request during validation returned 401. It is not currently ingested, and its documentation examples are not treated as real scores. This is another possible source after a user supplies an appropriate local key and its benchmark methodology is verified.

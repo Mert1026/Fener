@@ -30,7 +30,8 @@ class MissingCredential(RuntimeError):
 
 def ensure_sources(session: Session, config: Settings) -> None:
     for spec in SOURCES.values():
-        if session.get(Source, spec.id) is None:
+        source = session.get(Source, spec.id)
+        if source is None:
             session.add(
                 Source(
                     id=spec.id,
@@ -41,6 +42,8 @@ def ensure_sources(session: Session, config: Settings) -> None:
                     interval_seconds=config.fener_sync_interval_seconds,
                 )
             )
+        else:
+            source.interval_seconds = config.fener_sync_interval_seconds
     session.commit()
 
 

@@ -18,7 +18,7 @@ from fener.models import (
     SourceRecord,
 )
 from fener.sources.contracts import NativePrice, NormalizedRecord
-from fener.sources.ingestion import sync_source
+from fener.sources.ingestion import ensure_sources, sync_source
 from fener.sources.persist import CatalogWriter
 from sqlalchemy import func, select
 
@@ -129,6 +129,12 @@ def test_missing_key_is_explicit_and_no_network(session, tmp_path):
         httpx.Client(transport=httpx.MockTransport(reject)),
     )
     assert run.status == "needs_key"
+
+
+def test_schedule_configuration_updates_existing_sources(session):
+    ensure_sources(session, Settings(fener_sync_interval_seconds=7200))
+    ensure_sources(session, Settings(fener_sync_interval_seconds=14400))
+    assert session.get(Source, "models_dev").interval_seconds == 14400
 
 
 def test_decimal_json_keeps_source_precision():
