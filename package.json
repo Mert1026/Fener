@@ -1,5 +1,7 @@
 {
-  "name": "fener", "private": true, "packageManager": "pnpm@11.19.0",
+  "name": "fener",
+  "private": true,
+  "packageManager": "pnpm@11.19.0",
   "scripts": {
     "dev": "pnpm --filter @fener/web dev",
     "build": "pnpm --filter @fener/web build",
@@ -9,5 +11,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
-  "devDependencies": {"prettier": "^3.8.0"}
+  "devDependencies": {
+    "prettier": "^3.8.0"
+  }
 }

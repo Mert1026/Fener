@@ -5,6 +5,6 @@
 uv.lock
 pnpm-lock.yaml
 services
-tests
+/tests
 node_modules
 .next
