@@ -1,4 +1,6 @@
 import hashlib
+import os
+import tempfile
 import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -28,21 +30,33 @@ class LocalSnapshotStore:
         key = f"{content_hash[:2]}/{content_hash}.json"
         path = self.root / key
         path.parent.mkdir(parents=True, exist_ok=True)
-        if not path.exists():
-            # Exclusive creation avoids replacing any existing content-addressed object.
+        if path.exists():
+            if path.read_bytes() != content:
+                raise ValueError("Snapshot content-address collision or corrupt object")
+        else:
+            # Publish only a complete object. A crashed write leaves a temporary
+            # file, never a truncated file at the content-addressed key.
+            temporary: str | None = None
             try:
-                with path.open("xb") as file:
+                with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as file:
+                    temporary = file.name
                     file.write(content)
-            except FileExistsError:
-                if path.read_bytes() != content:
-                    raise ValueError("Snapshot content-address collision") from None
+                    file.flush()
+                    os.fsync(file.fileno())
+                os.replace(temporary, path)
+            finally:
+                if temporary:
+                    Path(temporary).unlink(missing_ok=True)
         return content_hash, key
 
     def get(self, key: str) -> bytes:
         path = (self.root / key).resolve()
         if not path.is_relative_to(self.root.resolve()):
             raise ValueError("Invalid snapshot path")
-        return path.read_bytes()
+        content = path.read_bytes()
+        if path.stem != hashlib.sha256(content).hexdigest():
+            raise ValueError("Snapshot integrity check failed")
+        return content
 
 
 @dataclass

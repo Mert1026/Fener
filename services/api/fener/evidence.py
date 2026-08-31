@@ -67,6 +67,9 @@ class EvidenceWriter:
         source_key = (self.source_id, *key)
         previous_claim = self.claims.get(source_key)
         previous = self.facts[previous_claim.observation_id] if previous_claim else None
+        if previous_claim:
+            previous_claim.last_seen_at = self.observed_at
+            previous_claim.confirming_record_id = record.id
         if previous is not None and previous.value == value:
             return previous, False
         # Chain the previous observation so A -> B -> A remains three observations.
@@ -93,6 +96,8 @@ class EvidenceWriter:
                 entity_id=entity_id,
                 field=field,
                 observation_id=fact.id,
+                last_seen_at=self.observed_at,
+                confirming_record_id=record.id,
             )
             self.session.add(claim)
             self.claims[source_key] = claim

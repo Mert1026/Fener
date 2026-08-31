@@ -5,10 +5,10 @@ import structlog
 import typer
 from fener.config import settings
 from fener.db import get_engine
-from fener.models import Source
+from fener.models import IngestionRun, Source
 from fener.sources.ingestion import ensure_sources, sync_source
 from fener.sources.registry import SOURCES
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 app = typer.Typer(help="Fener ingestion and local administration", no_args_is_help=True)
@@ -55,7 +55,11 @@ def worker() -> None:
         with Session(get_engine()) as session:
             ensure_sources(session, settings())
             for source in session.scalars(select(Source).where(Source.enabled.is_(True))):
-                last = source.last_success_at
+                last = session.scalar(
+                    select(func.max(IngestionRun.started_at)).where(
+                        IngestionRun.source_id == source.id
+                    )
+                )
                 if (
                     last
                     and (datetime.now(UTC) - last.replace(tzinfo=UTC)).total_seconds()

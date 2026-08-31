@@ -78,6 +78,13 @@ class CatalogWriter:
         canonical_key = f"canonical:{row.canonical_id}"
         if model is None:
             model = self.models.get(canonical_key) if row.canonical_id else None
+        # Exact access provider + API identifier + serving variant is strong
+        # deployment evidence. Reuse its model before making a source candidate.
+        if model is None and row.provider_id and row.api_id:
+            variant = "routing" if row.listing_kind == "routing_quote" else row.variant
+            existing = self.deployments.get(digest(row.provider_id, row.api_id, variant))
+            if existing:
+                model = self.models_by_id[existing.model_id]
         new_model = model is None
         if model is None:
             key = (

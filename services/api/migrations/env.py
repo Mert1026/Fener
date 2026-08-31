@@ -1,5 +1,8 @@
 from alembic import context
-from fener import models  # noqa: F401
+from fener import (
+    models,  # noqa: F401
+    private_models,  # noqa: F401
+)
 from fener.config import settings
 from fener.db import Base, make_engine
 

@@ -177,7 +177,9 @@ class SourceClaim(Base):
     entity_type: Mapped[str] = mapped_column(String(30), primary_key=True)
     entity_id: Mapped[str] = mapped_column(String(300), primary_key=True)
     field: Mapped[str] = mapped_column(String(100), primary_key=True)
-    observation_id: Mapped[str] = mapped_column(ForeignKey("fact_observations.id"))
+    observation_id: Mapped[str] = mapped_column(ForeignKey("fact_observations.id"), index=True)
+    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    confirming_record_id: Mapped[str | None] = mapped_column(ForeignKey("source_records.id"))
 
 
 class Price(Base):

@@ -4,6 +4,7 @@ from decimal import Decimal
 
 import httpx
 import pytest
+from fener.catalog import facts_for
 from fener.config import Settings
 from fener.models import (
     Conflict,
@@ -134,3 +135,22 @@ def test_decimal_json_keeps_source_precision():
     value = json.loads('{"price": 0.049999999999999996}', parse_float=Decimal)
     price = NativePrice(metric="input_tokens", amount=value["price"], quantity=1000000)
     assert price.normalized == Decimal("0.049999999999999996")
+
+
+def test_unchanged_price_retains_confirmation_with_changed_raw_metadata(session):
+    setup_source(session)
+    write(session, "1")
+    original = session.scalar(select(Price))
+    later = datetime(2026, 1, 2, tzinfo=UTC)
+    record = row("1", canonical=True)
+    record.raw["description"] = "Source changed unrelated metadata"
+    CatalogWriter(session, "models_dev", later).persist(
+        record, "models_dev", "https://models.dev/api.json"
+    )
+    session.commit()
+    assert session.scalar(select(func.count()).select_from(Price)) == 1
+    fact = facts_for(session, "deployment", [original.deployment_id])[original.deployment_id][
+        "price.input_tokens"
+    ]
+    assert fact.last_seen_at == later
+    assert fact.id == original.id
