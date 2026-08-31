@@ -46,7 +46,9 @@ export function marketChange(event: MarketEvent) {
   if (before && after) {
     // Normalize both sides to the same display quantity without float rounding.
     const basis = after.unit === "tokens" ? 1_000_000 : 1;
-    const previous = new ExactDecimal(before.amount).mul(basis).div(before.quantity);
+    const previous = new ExactDecimal(before.amount)
+      .mul(basis)
+      .div(before.quantity);
     const next = new ExactDecimal(after.amount).mul(basis).div(after.quantity);
     const label = (value: Decimal, currency: string) =>
       `${currency === "USD" ? "$" : `${currency} `}${value.toString()}`;

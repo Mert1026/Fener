@@ -8,7 +8,9 @@ FastAPI serves versioned REST resources under `/api/v1`. Interactive documentati
 - `GET /models/{id}`: intrinsic facts, deployment evidence, benchmark results.
 - `GET /models/{id}/deployments`, `/models/{id}/pricing`.
 - `GET /deployments`, `/providers`, `/providers/{id}`.
-- `GET /benchmarks`, `/market-events`, `/sources`, `/overview`.
+- `GET /benchmarks` (optional `group_id`) and `/benchmarks/groups`: latest source-confirmed observations grouped by benchmark name and reported score metric. Report URL/date and methodology gaps accompany results.
+- `GET /market-events`: material events, filtering legacy equivalent-price changes before pagination. Values remain structured in the API; the UI formats them as cards.
+- `GET /sources`, `/overview`.
 - `GET /observations/{id}`: normalized value, original source record and snapshot reference.
 - `POST /deployments/{id}/cost`: workload calculation with assumptions.
 - `POST /recommendations/preview`: bounded read-only deterministic ranking.
@@ -20,6 +22,11 @@ Prices serialize as decimal strings, never binary floating-point money. Dates us
 ## Private resources
 
 Send `Authorization: Bearer <FENER_ADMIN_KEY>`. Unconfigured authentication disables private access rather than making it public.
+
+- `GET /research`: configuration readiness and private research history; never returns provider keys.
+- `POST /research`: `request_id` (UUID), `query` (10–1,500 characters), and `acknowledge_cost: true`. Requires local `OPENAI_API_KEY`; returns a saved note/status, never a catalog mutation. Reusing an ID returns its existing attempt; a different query for the same ID conflicts. Daily limits include unsuccessful attempts. Connection failures can leave an `uncertain` result and are never retried automatically.
+
+Harness, telemetry and evaluation operations listed below are **paused** and return 410 after authentication unless deliberately re-enabled on the server. The web proxy does not expose them. Existing stored data remains intact. Source jobs and identity review operations continue to work.
 
 - `GET /data-health`: ingestion run summaries and disagreements.
 - `POST /recommendations`: audited ranking.
@@ -59,4 +66,4 @@ with httpx.Client(base_url="http://127.0.0.1:8000/api/v1", headers={
 
 ## Evaluation execution
 
-The platform scores submitted outputs. It does not spend money calling inference APIs. Create a suite version with cases (`input`, `reference`, `scorer`); supported scorers are `exact_match`, `contains`, and `human`. Submit exactly one output per case with a deployment identifier and evaluator version. Human scoring requires an explicit [0,1] rating. Results are private and preserve scorer versions and outputs for reproducibility.
+This feature is paused. Its retained implementation scores submitted outputs without calling inference APIs. Supported scorers are `exact_match`, `contains`, and `human`; historical results remain private. Manual AI research is separate and may incur charges only after approval.

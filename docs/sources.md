@@ -36,4 +36,6 @@ Inspect the publisher's current API/schema, authentication, quota and terms. Add
 
 ### Additional benchmark access
 
+Manual research is a separate optional channel. It uses [OpenAI Responses web search](https://developers.openai.com/api/docs/guides/tools-web-search) and the configurable [GPT-5.4 mini model](https://developers.openai.com/api/docs/models/gpt-5.4-mini), with a fixed domain allowlist and explicit approval. Clickable citations support review; they do not verify model-generated claims or authorize ingestion. Results remain private notes and are never fed into the deterministic source adapters automatically.
+
 OpenRouter also documents an authenticated [unified benchmark endpoint](https://openrouter.ai/docs/api/api-reference/benchmarks/list-benchmarks). A public request during validation returned 401. It is not currently ingested, and its documentation examples are not treated as real scores. This is another possible source after a user supplies an appropriate local key and its benchmark methodology is verified.

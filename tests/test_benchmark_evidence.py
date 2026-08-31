@@ -12,9 +12,19 @@ from test_ingestion import row, setup_source
 
 def write_benchmark(session, score, metric, tick=0):
     item = row(canonical=True)
-    item.benchmarks = [{"name": "Fixture benchmark", "score": score, "metric": metric, "source": "https://aider.chat/docs/leaderboards/", "date": "2026-01-01"}]
+    item.benchmarks = [
+        {
+            "name": "Fixture benchmark",
+            "score": score,
+            "metric": metric,
+            "source": "https://aider.chat/docs/leaderboards/",
+            "date": "2026-01-01",
+        }
+    ]
     item.raw["benchmarks"] = item.benchmarks
-    CatalogWriter(session, "models_dev", datetime(2026, 1, 1, tzinfo=UTC) + timedelta(hours=tick)).persist(item, "models_dev", "https://models.dev/api.json")
+    CatalogWriter(
+        session, "models_dev", datetime(2026, 1, 1, tzinfo=UTC) + timedelta(hours=tick)
+    ).persist(item, "models_dev", "https://models.dev/api.json")
     session.commit()
 
 
@@ -53,7 +63,12 @@ def test_ambiguous_metadata_and_out_of_range_scores_never_become_comparable(sess
     assert not benchmark_metadata(result, definition, record)["comparable"]
     assert comparable_scores(session)[0] == {}
     result.score = Decimal(14)
-    record.raw = {"benchmarks": [{"name": definition.name, "score": 14, "metric": "Elo"}, {"name": definition.name, "score": 14, "metric": "win rate"}]}
+    record.raw = {
+        "benchmarks": [
+            {"name": definition.name, "score": 14, "metric": "Elo"},
+            {"name": definition.name, "score": 14, "metric": "win rate"},
+        ]
+    }
     assert benchmark_metadata(result, definition, record)["metric"] == "Unspecified metric"
     assert comparable_scores(session)[0] == {}
     assert safe_report_url("javascript:alert(1)") is None

@@ -20,6 +20,10 @@ Weights are explicit, nonnegative and must sum to a positive value. Price utilit
 
 Benchmark weights identify exact benchmark versions. Normalization requires known lower/upper bounds and direction. Unversioned or unscaled catalog scores are preserved for inspection but excluded. Current source coverage may therefore provide no normalized quality evidence. Price-only recommendations always have low task-quality confidence. No percentage confidence is invented.
 
+Reported score units are recovered from the exact matching original source entry. Ambiguous entries remain unspecified. Benchmark browsing separates name-plus-metric groups (for example GDPval-AA Elo versus win rate), lists models alphabetically rather than presenting an unverified ranking, and uses the latest source confirmation per model/version/evaluator/metric. Comparable evidence additionally requires a supplied metric and an in-range score. Scores are never rescaled from appearance or magnitude alone. All underlying observations remain stored.
+
+Price-change comparison uses Decimal amounts per the stated billing quantity with matching currency/unit. Extra source fields must also agree. Trailing zeros or equivalent quantities are not economic changes; real small differences remain changes. The feed filters legacy equivalent-price events before pagination without deleting evidence.
+
 The API's `task` label is descriptive; it does not silently select magical task weights. Configure requirements and weights explicitly. Internal evaluations are separate evidence and do not silently blend into public scores.
 
 ## Pareto

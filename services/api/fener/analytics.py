@@ -32,7 +32,9 @@ def comparable_scores(
             BenchmarkDefinition.score_max.is_not(None),
             BenchmarkDefinition.higher_is_better.is_not(None),
         )
-        .order_by(SourceRecord.last_seen_at.desc(), SourceRecord.observed_at.desc(), BenchmarkResult.id)
+        .order_by(
+            SourceRecord.last_seen_at.desc(), SourceRecord.observed_at.desc(), BenchmarkResult.id
+        )
     )
     for result, definition, record in rows:
         metadata = benchmark_metadata(result, definition, record)

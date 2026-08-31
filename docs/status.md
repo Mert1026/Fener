@@ -8,7 +8,9 @@ Real models.dev, OpenRouter and LiteLLM ingestion; a credential-gated LLM Stats 
 
 Typed catalog API and generated TypeScript schemas; all main navigation views; server-side model filtering and paging; configurable table columns; local comparison selections; deployment-specific flat-rate costing; source evidence views; historical prices; deterministic recommendation constraints, explicit weights, missing-evidence coverage and fallback chains. Quality normalization and Pareto calculations reject incomplete methodology. There is no fake quality scatter.
 
-Private harness registration, role defaults, versioned policy drafts and explicit approval, idempotent telemetry, observed harness summaries, versioned evaluation suites, deterministic exact/contains scoring, explicit human ratings and private result history. Evaluation outputs are submitted by your runner; Fener does not make paid inference calls.
+The market feed displays readable cards and numerical price changes, filtering formatting-only events while preserving stored history. Benchmark groups separate score units, retain original report links/dates and surface missing methodology. No source score is guessed or silently rescaled.
+
+Private manual AI research uses cited web search, explicit cost approval, local usage limits and no retries. Notes remain unverified and cannot update the catalog. Live provider execution still needs a local `OPENAI_API_KEY`; only mocked provider flows have been tested. Harness and evaluation screens are removed for now; their authenticated API operations are paused by default and existing history remains intact.
 
 ## Still gated or intentionally unfinished
 
@@ -21,7 +23,7 @@ Private harness registration, role defaults, versioned policy drafts and explici
 | Conflict review      | Both observations and deterministic precedence are inspectable. User-configured field authority policies and a manual conflict-winner workflow are not implemented.                                                      |
 | Cost tiers           | Flat source rates, cache and supported usage components work. Context tiers, batch discounts and provider-specific billing rules need explicit source contracts.                                                         |
 | Internal learning    | Telemetry and evaluation history are stored separately from public evidence. Statistical confidence intervals, learned role preferences, savings analysis and automatic candidate-evaluation queues are not implemented. |
-| Evaluation execution | Suites and results work through the API; the UI creates a first-case suite and shows history. A full multi-case editor and paid inference execution with budgets/approvals remain future work.                           |
+| Evaluation execution | Paused by default. UI removed; legacy tables and implementation are preserved for a possible later return. No paid evaluation executor is implemented.                                                                   |
 | Notifications        | No external messaging, watchlist notifications or automated recommendations are sent.                                                                                                                                    |
 | Public hosting       | No deployment, public accounts, tenancy, public-data licensing review or production monitoring stack is configured.                                                                                                      |
 

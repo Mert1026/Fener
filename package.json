@@ -10,8 +10,8 @@
     "lint": "pnpm --filter @fener/web lint",
     "typecheck": "pnpm --filter @fener/web typecheck",
     "test": "pnpm --filter @fener/web test",
-    "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format": "prettier --write \"*.{json,md,yaml,yml}\" .github docs \"apps/web/*.{ts,js,json,md}\" apps/web/app apps/web/components apps/web/lib apps/web/tests apps/web/e2e",
+    "format:check": "prettier --check \"*.{json,md,yaml,yml}\" .github docs \"apps/web/*.{ts,js,json,md}\" apps/web/app apps/web/components apps/web/lib apps/web/tests apps/web/e2e"
   },
   "devDependencies": {
     "prettier": "^3.8.0"

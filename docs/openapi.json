@@ -627,6 +627,76 @@
         ]
       }
     },
+    "/api/v1/research": {
+      "get": {
+        "tags": ["Manual research"],
+        "summary": "Research Home",
+        "operationId": "research_home_api_v1_research_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Research Home Api V1 Research Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": ["Manual research"],
+        "summary": "Research Run",
+        "operationId": "research_run_api_v1_research_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResearchInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Research Run Api V1 Research Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/healthz": {
       "get": {
         "summary": "Health",
@@ -1200,6 +1270,22 @@
               "default": 100,
               "title": "Limit"
             }
+          },
+          {
+            "name": "group_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Group Id"
+            }
           }
         ],
         "responses": {
@@ -1224,6 +1310,29 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/benchmarks/groups": {
+      "get": {
+        "summary": "Benchmark Group List",
+        "operationId": "benchmark_group_list_api_v1_benchmarks_groups_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "type": "array",
+                  "title": "Response Benchmark Group List Api V1 Benchmarks Groups Get"
                 }
               }
             }
@@ -2269,6 +2378,30 @@
         "additionalProperties": false,
         "type": "object",
         "title": "RecommendationInput"
+      },
+      "ResearchInput": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Request Id"
+          },
+          "query": {
+            "type": "string",
+            "maxLength": 1500,
+            "minLength": 10,
+            "title": "Query"
+          },
+          "acknowledge_cost": {
+            "type": "boolean",
+            "const": true,
+            "title": "Acknowledge Cost"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": ["request_id", "query", "acknowledge_cost"],
+        "title": "ResearchInput"
       },
       "SuiteInput": {
         "properties": {

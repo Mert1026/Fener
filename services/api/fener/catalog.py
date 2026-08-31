@@ -235,7 +235,9 @@ def benchmark_results(
     if model_id:
         query = query.where(BenchmarkResult.model_id == model_id)
     rows = session.execute(
-        query.order_by(SourceRecord.last_seen_at.desc(), SourceRecord.observed_at.desc(), BenchmarkResult.id)
+        query.order_by(
+            SourceRecord.last_seen_at.desc(), SourceRecord.observed_at.desc(), BenchmarkResult.id
+        )
     )
     latest = {}
     for result, definition, name, record in rows:

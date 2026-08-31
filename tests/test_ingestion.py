@@ -172,12 +172,31 @@ def test_decimal_formatting_does_not_create_price_facts_events_or_conflicts(sess
     assert session.scalar(select(func.count()).select_from(Fact)) == count
     assert session.scalar(select(func.count()).select_from(Price)) == 1
     assert session.scalar(select(func.count()).select_from(SourceRecord)) == 2
-    assert session.scalar(select(func.count()).select_from(MarketEvent).where(MarketEvent.event_type == "price_change")) == 0
+    assert (
+        session.scalar(
+            select(func.count())
+            .select_from(MarketEvent)
+            .where(MarketEvent.event_type == "price_change")
+        )
+        == 0
+    )
     setup_source(session, "litellm")
     write(session, "0.2000", "litellm", 2)
-    assert session.scalar(select(func.count()).select_from(Conflict).where(Conflict.field == "price.input_tokens")) == 0
+    assert (
+        session.scalar(
+            select(func.count()).select_from(Conflict).where(Conflict.field == "price.input_tokens")
+        )
+        == 0
+    )
     write(session, "0.200000001", tick=3)
-    assert session.scalar(select(func.count()).select_from(MarketEvent).where(MarketEvent.event_type == "price_change")) == 1
+    assert (
+        session.scalar(
+            select(func.count())
+            .select_from(MarketEvent)
+            .where(MarketEvent.event_type == "price_change")
+        )
+        == 1
+    )
 
 
 def test_market_hides_legacy_formatting_events_before_pagination(client):
@@ -185,9 +204,23 @@ def test_market_hides_legacy_formatting_events_before_pagination(client):
         setup_source(session)
         write(session, "0.2")
         price = session.scalar(select(Price))
-        for i, (before, after) in enumerate([("0.2", "0.2000000"), ("0.3", "0.300"), ("0.2", "0.4"), ("0.4", "0.1")]):
+        for i, (before, after) in enumerate(
+            [("0.2", "0.2000000"), ("0.3", "0.300"), ("0.2", "0.4"), ("0.4", "0.1")]
+        ):
             value = {"currency": "USD", "quantity": 1000000, "unit": "tokens"}
-            session.add(MarketEvent(id=f"legacy-{i}", entity_type="deployment", entity_id=price.deployment_id, event_type="price_change", title="price.input tokens changed", old_value={**value, "amount": before}, new_value={**value, "amount": after}, source_record_id=price.source_record_id, detected_at=datetime(2026, 1, 2, tzinfo=UTC) - timedelta(hours=i)))
+            session.add(
+                MarketEvent(
+                    id=f"legacy-{i}",
+                    entity_type="deployment",
+                    entity_id=price.deployment_id,
+                    event_type="price_change",
+                    title="price.input tokens changed",
+                    old_value={**value, "amount": before},
+                    new_value={**value, "amount": after},
+                    source_record_id=price.source_record_id,
+                    detected_at=datetime(2026, 1, 2, tzinfo=UTC) - timedelta(hours=i),
+                )
+            )
         session.commit()
     first = client.get("/api/v1/market-events?event_type=price_change&limit=1").json()
     second = client.get("/api/v1/market-events?event_type=price_change&limit=1&offset=1").json()
@@ -195,4 +228,11 @@ def test_market_hides_legacy_formatting_events_before_pagination(client):
     assert first[0]["change_field"] == "price.input_tokens"
     assert first[0]["model_name"] == "Fixture model"
     with Session(client.test_engine) as session:
-        assert session.scalar(select(func.count()).select_from(MarketEvent).where(MarketEvent.event_type == "price_change")) == 4
+        assert (
+            session.scalar(
+                select(func.count())
+                .select_from(MarketEvent)
+                .where(MarketEvent.event_type == "price_change")
+            )
+            == 4
+        )

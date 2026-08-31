@@ -1,6 +1,6 @@
 # Fener
 
-Source-backed AI model intelligence: discover models, inspect provider deployments, compare workload costs, trace changes, and evaluate candidates against your own work.
+Source-backed AI model intelligence: discover models, inspect provider deployments, compare workload costs, trace changes, and investigate claims with cited research.
 
 **Every number needs a source.** Canonical models are separate from serving deployments. An access gateway is not automatically the inference provider. Unknown prices, capabilities and benchmark methodology remain unknown.
 
@@ -42,11 +42,19 @@ python scripts/manage.py check
 - Real models.dev, OpenRouter and LiteLLM adapters, raw snapshots, conditional fetching, failure isolation, scheduled and manually queued syncs.
 - Canonical catalog, conservative identity matching, audited deployment identity corrections, append-only fact and price history, source precedence, conflicts and market events.
 - Overview, model explorer/detail, providers/detail, comparison with deployment selection, cost calculator, benchmarks, market feed and deterministic recommendations with constraints, coverage and fallback chains.
-- Private harnesses, roles, versioned policies with explicit approval, idempotent telemetry, immutable evaluation suites and recorded deterministic or human-scored runs.
+- Market cards with readable rates and directional changes. Numerically equivalent prices do not create change events; existing formatting-only events are hidden without deleting audit history.
+- Benchmark browsing by name **and reported metric**, with original report links, dates and explicit evidence gaps. Elo and win-rate scores are never shown as one ranking.
+- Optional, private AI research with clickable citations, explicit approval per run, usage caps and no automatic catalog writes. Harness/evaluation screens are removed for now; their API operations are disabled by default and existing data is preserved.
 - Price/quality normalization and Pareto calculation **only when comparable versioned evidence exists**. Missing methodology produces an explained empty state, never invented points.
 - Same-origin authenticated server proxy, signed expiring sessions, private API boundaries, source allowlists, body limits, rate limits, backups, catalog-only exports and CI.
 
 The current live catalog was fetched from real sources. There is no production seed or synthetic leaderboard. Tests use small, labelled fixtures.
+
+## Optional AI research
+
+Add `OPENAI_API_KEY` to the ignored root `.env`, restart the API, unlock Settings with your local `FENER_ADMIN_KEY`, and open **AI research**. Never paste provider keys into research questions. Each run sends the approved question to OpenAI and web search and may incur charges. Without a key the catalog and source syncs still work.
+
+The default research model is `gpt-5.4-mini`; `FENER_RESEARCH_MODEL` can select another compatible Responses/web-search model. Each request permits up to two web-tool calls and 2,000 output tokens; `FENER_RESEARCH_DAILY_LIMIT` defaults to five attempts in the last 24 hours, including failed/uncertain attempts. These are usage caps, not a dollar budget. No automatic retries or scheduled AI runs occur. Saved notes remain unverified and never overwrite prices, benchmark scores or identities. See [research and security](SECURITY.md).
 
 ## Source coverage and limits
 
@@ -61,7 +69,7 @@ This is a working foundation, not a claim that every advanced feature in the pro
 - [Development and commands](docs/development.md)
 - [Architecture](docs/architecture.md) and [data model](docs/data-model.md)
 - [Sources, contracts and attribution](docs/sources.md)
-- [API and harness integration](docs/api.md)
+- [API and research integration](docs/api.md)
 - [Scoring and cost methodology](docs/scoring.md)
 - [Operations, backup and restore](docs/operations.md)
 - [Security and privacy](SECURITY.md)

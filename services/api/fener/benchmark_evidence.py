@@ -36,7 +36,12 @@ def benchmark_metadata(
             continue
     # Ambiguous source entries must not lend each other units or report links.
     raw = matches[0] if len(matches) == 1 else {}
-    metric = str(raw.get("metric") or "Unspecified metric").strip()
+    raw_metric = raw.get("metric")
+    metric = (
+        raw_metric.strip()
+        if isinstance(raw_metric, str) and raw_metric.strip()
+        else "Unspecified metric"
+    )
     issues = []
     if metric == "Unspecified metric":
         issues.append("Score unit or metric not supplied")

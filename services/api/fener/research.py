@@ -161,7 +161,9 @@ def fetch_research(request: dict[str, Any], key: str) -> dict[str, Any]:
 
 def run_view(row: ResearchRun) -> dict[str, Any]:
     # An interrupted server can leave an attempt without a final provider response.
-    started = row.created_at.replace(tzinfo=UTC) if row.created_at.tzinfo is None else row.created_at
+    started = (
+        row.created_at.replace(tzinfo=UTC) if row.created_at.tzinfo is None else row.created_at
+    )
     stale = row.status == "running" and started < utcnow() - timedelta(minutes=5)
     return {
         "id": row.id,
