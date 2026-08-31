@@ -1,0 +1,10 @@
+.data
+.cache
+.tools
+.venv
+uv.lock
+pnpm-lock.yaml
+services
+tests
+node_modules
+.next

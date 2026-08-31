@@ -1,0 +1,13 @@
+{
+  "name": "fener", "private": true, "packageManager": "pnpm@11.19.0",
+  "scripts": {
+    "dev": "pnpm --filter @fener/web dev",
+    "build": "pnpm --filter @fener/web build",
+    "lint": "pnpm --filter @fener/web lint",
+    "typecheck": "pnpm --filter @fener/web typecheck",
+    "test": "pnpm --filter @fener/web test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {"prettier": "^3.8.0"}
+}
