@@ -114,3 +114,43 @@ def test_evaluation_versions_and_exact_case_membership(private):
     saved = private.get("/api/v1/evaluations").json()["runs"][0]
     assert saved["evaluator_version"] == "reviewer-1"
     assert all(row["scorer_version"] == "1" for row in saved["results"])
+
+
+def test_manual_sync_is_durable_and_deduplicated(private):
+    first = private.post("/api/v1/internal/sync", json={"source_id": "models_dev"})
+    second = private.post("/api/v1/internal/sync", json={"source_id": "models_dev"})
+    assert first.status_code == 202 and first.json() == second.json()
+    assert len(private.get("/api/v1/internal/sync").json()) == 1
+    assert (
+        private.post(
+            "/api/v1/internal/sync", json={"source_id": "https://malicious.example"}
+        ).status_code
+        == 422
+    )
+
+
+def test_identity_override_is_scoped_and_audited(private):
+    with Session(private.test_engine) as session:
+        session.add(
+            Model(
+                id="target",
+                identity_key="canonical:target",
+                name="Canonical target",
+                identity_status="resolved",
+            )
+        )
+        session.commit()
+    response = private.post(
+        "/api/v1/internal/deployments/deployment/identity",
+        json={
+            "target_model_id": "target",
+            "evidence_url": "https://example.com/verified-mapping",
+            "note": "Reviewed exact API identifier in publisher documentation",
+        },
+    )
+    assert response.status_code == 200
+    audit = private.get("/api/v1/internal/identity-overrides").json()[0]
+    assert audit["previous_model_id"] == "model" and audit["target_model_id"] == "target"
+    with Session(private.test_engine) as session:
+        assert session.get(Deployment, "deployment").model_id == "target"
+        assert session.get(Model, "model") is not None

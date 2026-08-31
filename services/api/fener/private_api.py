@@ -3,25 +3,31 @@ from typing import Annotated, Any, Literal
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import AwareDatetime, Field, model_validator
+from pydantic import AwareDatetime, Field, HttpUrl, model_validator
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from fener.api_schemas import StrictInput
+from fener.config import settings
 from fener.db import session_dependency, utcnow
 from fener.evidence import digest
-from fener.models import Deployment
+from fener.models import Deployment, DeploymentAlias, Model, ModelAlias
 from fener.private_models import (
     EvaluationCase,
     EvaluationRun,
     EvaluationSuite,
     Harness,
     HarnessRole,
+    IdentityOverride,
     ModelPolicy,
+    SyncRequest,
     TelemetryRun,
 )
 from fener.recommendations import RecommendationInput
 from fener.security import require_admin
+from fener.sources.ingestion import ensure_sources
+from fener.sources.registry import SOURCES
 
 router = APIRouter(
     prefix="/api/v1", dependencies=[Depends(require_admin)], tags=["Private intelligence"]
@@ -140,6 +146,7 @@ def approve_policy(policy_id: str, request: PolicyApproval, session: DB) -> dict
     role.default_deployment_id = request.deployment_id
     policy.approved_at = utcnow()
     policy.approval_note = request.note
+    policy.approved_deployment_id = request.deployment_id
     session.commit()
     return {"status": "approved"}
 
@@ -190,7 +197,19 @@ def telemetry(request: TelemetryInput, session: DB) -> dict[str, Any]:
         return {"id": previous.id, "duplicate": True}
     row = TelemetryRun(id=str(uuid4()), fingerprint=fingerprint, **request.model_dump())
     session.add(row)
-    session.commit()
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        concurrent = session.scalar(
+            select(TelemetryRun).where(
+                TelemetryRun.harness_id == request.harness_id,
+                TelemetryRun.external_run_id == request.external_run_id,
+            )
+        )
+        if concurrent and concurrent.fingerprint == fingerprint:
+            return {"id": concurrent.id, "duplicate": True}
+        raise HTTPException(409, "Run identifier conflicts with another submission") from None
     return {"id": row.id, "duplicate": False}
 
 
@@ -354,3 +373,109 @@ def evaluate(request: EvaluationInput, session: DB) -> dict[str, str]:
     session.add(row)
     session.commit()
     return {"id": row.id, "score": str(score)}
+
+
+class SyncInput(StrictInput):
+    source_id: str
+
+
+@router.post("/internal/sync", status_code=202)
+def enqueue_sync(request: SyncInput, session: DB) -> dict[str, str]:
+    if request.source_id not in SOURCES:
+        raise HTTPException(422, "Unknown source")
+    ensure_sources(session, settings())
+    existing = session.scalar(
+        select(SyncRequest).where(SyncRequest.active_source == request.source_id)
+    )
+    if existing:
+        return {"id": existing.id, "status": existing.status}
+    row = SyncRequest(id=str(uuid4()), source_id=request.source_id, active_source=request.source_id)
+    session.add(row)
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        concurrent = session.scalar(
+            select(SyncRequest).where(SyncRequest.active_source == request.source_id)
+        )
+        if concurrent:
+            return {"id": concurrent.id, "status": concurrent.status}
+        raise HTTPException(409, "Source queue changed; retry") from None
+    return {"id": row.id, "status": row.status}
+
+
+@router.get("/internal/sync")
+def sync_requests(session: DB) -> list[dict[str, Any]]:
+    return [
+        {
+            "id": r.id,
+            "source_id": r.source_id,
+            "status": r.status,
+            "created_at": r.created_at,
+            "ingestion_run_id": r.ingestion_run_id,
+        }
+        for r in session.scalars(
+            select(SyncRequest).order_by(SyncRequest.created_at.desc()).limit(50)
+        )
+    ]
+
+
+class IdentityInput(StrictInput):
+    target_model_id: str
+    evidence_url: HttpUrl
+    note: str = Field(min_length=10, max_length=2000)
+
+
+@router.post("/internal/deployments/{deployment_id}/identity")
+def resolve_identity(deployment_id: str, request: IdentityInput, session: DB) -> dict[str, str]:
+    deployment = session.scalar(
+        select(Deployment).where(Deployment.id == deployment_id).with_for_update()
+    )
+    target = session.get(Model, request.target_model_id)
+    if deployment is None or target is None:
+        raise HTTPException(404, "Deployment or target model not found")
+    if target.identity_status != "resolved":
+        raise HTTPException(422, "Target must be a resolved canonical model")
+    if deployment.model_id == target.id:
+        raise HTTPException(409, "Deployment already belongs to this model")
+    audit = IdentityOverride(
+        id=str(uuid4()),
+        deployment_id=deployment.id,
+        previous_model_id=deployment.model_id,
+        target_model_id=target.id,
+        evidence_url=str(request.evidence_url),
+        note=request.note,
+    )
+    session.add(audit)
+    deployment.model_id = target.id
+    aliases = session.scalars(
+        select(DeploymentAlias).where(DeploymentAlias.deployment_id == deployment.id)
+    )
+    for alias in aliases:
+        model_alias = session.scalar(
+            select(ModelAlias).where(
+                ModelAlias.source_id == alias.source_id, ModelAlias.external_id == alias.external_id
+            )
+        )
+        if model_alias:
+            model_alias.model_id = target.id
+    session.commit()
+    return {"id": audit.id, "status": "resolved", "model_id": target.id}
+
+
+@router.get("/internal/identity-overrides")
+def identity_overrides(session: DB) -> list[dict[str, Any]]:
+    return [
+        {
+            "id": r.id,
+            "deployment_id": r.deployment_id,
+            "previous_model_id": r.previous_model_id,
+            "target_model_id": r.target_model_id,
+            "evidence_url": r.evidence_url,
+            "note": r.note,
+            "created_at": r.created_at,
+        }
+        for r in session.scalars(
+            select(IdentityOverride).order_by(IdentityOverride.created_at.desc()).limit(100)
+        )
+    ]

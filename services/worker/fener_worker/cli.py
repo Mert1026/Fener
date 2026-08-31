@@ -11,6 +11,8 @@ from fener.sources.registry import SOURCES
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from fener_worker.jobs import process_queue
+
 app = typer.Typer(help="Fener ingestion and local administration", no_args_is_help=True)
 
 
@@ -54,6 +56,7 @@ def worker() -> None:
     while True:
         with Session(get_engine()) as session:
             ensure_sources(session, settings())
+            process_queue(session, settings())
             for source in session.scalars(select(Source).where(Source.enabled.is_(True))):
                 last = session.scalar(
                     select(func.max(IngestionRun.started_at)).where(

@@ -36,6 +36,7 @@ class ModelPolicy(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     approval_note: Mapped[str | None] = mapped_column(Text)
+    approved_deployment_id: Mapped[str | None] = mapped_column(ForeignKey("deployments.id"))
     __table_args__ = (UniqueConstraint("role_id", "version"),)
 
 
@@ -92,3 +93,25 @@ class EvaluationRun(Base):
     score: Mapped[Decimal] = mapped_column(Numeric(10, 8))
     results: Mapped[list[dict[str, Any]]] = mapped_column(JSON)
     configuration: Mapped[dict[str, Any]] = mapped_column(JSON)
+
+
+class SyncRequest(Base):
+    __tablename__ = "sync_requests"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    source_id: Mapped[str] = mapped_column(ForeignKey("sources.id"), index=True)
+    active_source: Mapped[str | None] = mapped_column(String(80), unique=True)
+    status: Mapped[str] = mapped_column(String(30), default="queued")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    ingestion_run_id: Mapped[str | None] = mapped_column(ForeignKey("ingestion_runs.id"))
+
+
+class IdentityOverride(Base):
+    __tablename__ = "deployment_identity_overrides"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    deployment_id: Mapped[str] = mapped_column(ForeignKey("deployments.id"), index=True)
+    previous_model_id: Mapped[str] = mapped_column(ForeignKey("models.id"))
+    target_model_id: Mapped[str] = mapped_column(ForeignKey("models.id"))
+    evidence_url: Mapped[str] = mapped_column(Text)
+    note: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

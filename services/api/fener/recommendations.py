@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Decimal, localcontext
 from typing import Any
 
 from pydantic import Field, model_validator
@@ -66,6 +66,12 @@ class RecommendationInput(StrictInput):
 
 
 def estimate_cost(deployment: DeploymentView, workload: Workload) -> dict[str, Any]:
+    with localcontext() as context:
+        context.prec = 100
+        return _estimate_cost(deployment, workload)
+
+
+def _estimate_cost(deployment: DeploymentView, workload: Workload) -> dict[str, Any]:
     quantities = {
         "input_tokens": Decimal(workload.input_tokens - workload.cached_input_tokens),
         "output_tokens": Decimal(workload.output_tokens),

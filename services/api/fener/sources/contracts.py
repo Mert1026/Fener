@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Decimal, localcontext
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -12,7 +12,9 @@ class NativePrice(BaseModel):
 
     @property
     def normalized(self) -> Decimal:
-        return self.amount * Decimal(1_000_000 if self.unit == "tokens" else 1) / self.quantity
+        with localcontext() as context:
+            context.prec = 100
+            return self.amount * Decimal(1_000_000 if self.unit == "tokens" else 1) / self.quantity
 
 
 class NormalizedRecord(BaseModel):

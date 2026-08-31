@@ -1,5 +1,6 @@
 import time
 from collections import defaultdict, deque
+from decimal import Decimal
 from typing import Annotated, Any, Literal
 from uuid import uuid4
 
@@ -11,6 +12,7 @@ from sqlalchemy import func, select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from fener.analytics import comparable_scores
 from fener.api_schemas import DeploymentView, ModelDetail, ModelPage, ProviderView
 from fener.catalog import (
     benchmark_results,
@@ -41,6 +43,7 @@ from fener.recommendations import (
     RecommendationInput,
     Workload,
     estimate_cost,
+    pareto_ids,
     recommend,
 )
 from fener.security import require_admin
@@ -224,9 +227,10 @@ def pricing(
     model_id: str, session: DB, limit: int = Query(200, ge=1, le=1000)
 ) -> list[dict[str, Any]]:
     query = (
-        select(Price, Deployment, SourceRecord)
+        select(Price, Deployment, SourceRecord, Fact)
         .join(Deployment, Price.deployment_id == Deployment.id)
         .join(SourceRecord, Price.source_record_id == SourceRecord.id)
+        .join(Fact, Price.id == Fact.id)
         .where(Deployment.model_id == model_id)
         .order_by(Price.observed_at.desc())
         .limit(limit)
@@ -237,7 +241,7 @@ def pricing(
             "deployment_id": price.deployment_id,
             "provider": deployment.access_provider_id,
             "metric": price.metric,
-            "amount": str(price.amount),
+            "amount": fact.value["amount"],
             "native_amount": price.native_amount,
             "quantity": price.quantity,
             "unit": price.unit,
@@ -246,7 +250,7 @@ def pricing(
             "source": record.source_id,
             "source_url": record.source_url,
         }
-        for price, deployment, record in session.execute(query)
+        for price, deployment, record, fact in session.execute(query)
     ]
 
 
@@ -365,11 +369,14 @@ def recommendation_result(session: Session, request: RecommendationInput) -> dic
     candidates = deployment_views(session, limit=10000)
     model_ids = list({d.model_id for d in candidates})
     model_facts = facts_for(session, "model", model_ids)
+    benchmark_scores, benchmark_evidence = comparable_scores(session)
     result = recommend(
         candidates,
         request,
         {id: {k: v.value for k, v in facts.items()} for id, facts in model_facts.items()},
+        benchmark_scores,
     )
+    result["benchmark_evidence"] = [r for r in benchmark_evidence if r["metric"] in request.weights]
     result["candidate_limit"] = 10000
     result["candidate_limit_reached"] = len(candidates) == 10000
     return result
@@ -407,6 +414,70 @@ def deployment_cost(deployment_id: str, request: Workload, session: DB) -> dict[
         if d.id == deployment_id
     )
     return estimate_cost(view, request)
+
+
+@app.get("/api/v1/analytics/benchmarks")
+def normalized_benchmarks(session: DB) -> list[dict[str, Any]]:
+    return comparable_scores(session)[1]
+
+
+@app.post("/api/v1/analytics/frontier")
+def frontier(request: RecommendationInput, session: DB) -> dict[str, Any]:
+    scores, evidence = comparable_scores(session)
+    benchmark_keys = {
+        key.removeprefix("benchmark:"): weight
+        for key, weight in request.weights.items()
+        if key.startswith("benchmark:") and weight > 0
+    }
+    if not benchmark_keys:
+        return {
+            "points": [],
+            "reason": "Choose explicit versioned benchmark weights; price alone cannot define a quality frontier.",
+        }
+    # All frontier candidates must cover the same quality dimensions. Partial
+    # coverage is retained in recommendations but excluded from dominance claims.
+    deployments = deployment_views(session, limit=10000)
+    facts = facts_for(session, "model", list({d.model_id for d in deployments}))
+    intrinsic = {id: {k: v.value for k, v in f.items()} for id, f in facts.items()}
+    points = []
+    for deployment in deployments:
+        values = scores.get(deployment.model_id, {})
+        if not all(key in values for key in benchmark_keys):
+            continue
+        accepted = recommend(
+            [deployment],
+            request,
+            intrinsic,
+            scores,
+        )
+        if accepted["recommended"] is None:
+            continue
+        cost = accepted["recommended"]["estimated_cost"]
+        quality = sum(
+            (values[key] * weight for key, weight in benchmark_keys.items()), Decimal(0)
+        ) / sum(benchmark_keys.values())
+        points.append(
+            {
+                "deployment_id": deployment.id,
+                "model_id": deployment.model_id,
+                "model_name": deployment.model_name,
+                "provider": deployment.access_provider,
+                "cost": cost,
+                "quality": str(quality),
+            }
+        )
+    ids = pareto_ids(
+        [(p["deployment_id"], Decimal(p["cost"]), Decimal(p["quality"])) for p in points]
+    )
+    return {
+        "points": [{**p, "pareto": p["deployment_id"] in ids} for p in points],
+        "evidence": [r for r in evidence if r["metric"] in request.weights],
+        "candidate_limit": 10000,
+        "candidate_limit_reached": len(deployments) == 10000,
+        "reason": None
+        if points
+        else "No candidates have complete comparable quality evidence and satisfy these constraints.",
+    }
 
 
 @app.get("/api/v1/data-health")
