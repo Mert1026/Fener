@@ -22,3 +22,10 @@ The repository Playwright suite was authored and type-checked, but not run throu
 LLM Stats live access remains blocked on a local API key. Its benchmark-detail contract is not guessed. OpenRouter's additional benchmark endpoint returned 401 without credentials. There is no fabricated normalized quality ranking.
 
 The backend test run has one upstream Starlette deprecation warning concerning its current httpx test-client integration; it does not fail tests. This validation is a record of the current local build, not a production availability or security guarantee.
+
+## Fenerbahçe colors and chart interaction update
+
+- Applied the requested navy `#002D72` and yellow `#FFED00`, including a yellow wordmark, mark and browser icon. Checked both themes in the browser; light mode keeps the navy sidebar and uses navy chart points for contrast.
+- Added context/cost zoom buttons, wheel/pinch zoom, panning, independent axis sliders and reset. Browser checks exercised 2× and 4× zoom, zoom out and full-range reset, including the 390px mobile layout. Wheel, pinch and slider gestures were not separately exercised. Identical coordinates are disclosed as overlapping; values are not jittered or invented.
+- Clarified harness, evaluation and source configuration descriptions. These edits do not introduce an AI research agent or inference executor.
+- Re-ran all checks: 44 backend tests including PostgreSQL, 7 web tests, lint/types/formatting and the production build passed. Alembic reported no schema drift. The live source-status API returned successful models.dev, OpenRouter and LiteLLM imports, with LLM Stats still requiring a key.

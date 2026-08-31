@@ -45,7 +45,7 @@ export default function HarnessesPage() {
       <PageHeader
         eyebrow="Personal intelligence"
         title="Your harnesses"
-        description="Model performance in your real workloads. Private telemetry, explicit roles, controlled defaults."
+        description="Connect your own AI app or agent workflow to track which models it uses, what runs cost and whether they succeed. Registering a harness does not launch an agent or connect an app automatically."
         action={
           <button
             className="button primary"

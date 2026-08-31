@@ -97,13 +97,20 @@ export default function SettingsPage() {
             <code>uv run fener sync</code>; continuous schedules run via{" "}
             <code>uv run fener worker</code>.
           </p>
+          <p style={{ marginTop: 17 }}>
+            Public models.dev, OpenRouter and LiteLLM catalog syncs work without
+            an AI key. LLM Stats needs its own source key; authenticated
+            benchmark detail ingestion still needs implementation and
+            verification. Adding a key does not enable AI web research.
+          </p>
         </section>
         <section className="panel settings-panel">
           <h2>Controlled policy changes</h2>
           <p>
-            Automatic model switching and AI research are disabled.
-            Recommendations provide evidence for a human decision. No paid model
-            calls run in the background.
+            Search filters the ingested catalog; recommendations use explicit
+            rules and evidence. AI web research is not implemented, and models
+            are never switched automatically. Recommendations provide evidence
+            for a human decision. No paid model calls run in the background.
           </p>
         </section>
       </div>

@@ -75,7 +75,7 @@ export default function EvaluationsPage() {
       <PageHeader
         eyebrow="The evaluation lab"
         title="Test against your own standard."
-        description="Versioned suites, deterministic scoring and explicit human ratings. Internal results stay private."
+        description="Test models on your own examples before choosing one. Your runner submits their answers; Fener scores and stores the results privately. It does not call the models for you."
         action={
           <button
             className="button primary"

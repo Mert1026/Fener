@@ -28,7 +28,9 @@ function Plot({ points }: { points: Point[] }) {
   useEffect(() => {
     if (!element.current) return;
     const chart = echarts.init(element.current);
-    const ink = resolvedTheme === "light" ? "#667085" : "#8993a4";
+    const styles = getComputedStyle(element.current);
+    const ink = styles.getPropertyValue("--muted").trim();
+    const accent = styles.getPropertyValue("--accent").trim();
     chart.setOption({
       animation: false,
       aria: { enabled: true },
@@ -57,7 +59,7 @@ function Plot({ points }: { points: Point[] }) {
         type: "scatter",
         name: frontier ? "Pareto frontier" : "Dominated",
         symbolSize: frontier ? 12 : 7,
-        itemStyle: { color: frontier ? "#8dd9ba" : "#7788b8" },
+        itemStyle: { color: frontier ? accent : ink },
         data: points
           .filter((p) => p.pareto === frontier)
           .map((p) => ({
@@ -107,8 +109,8 @@ export function BenchmarkFrontier() {
         <div>
           <h2>Quality for the money</h2>
           <p>
-            Exact benchmark version and evaluator. Green points cannot be beaten
-            on both cost and measured quality.
+            Exact benchmark version and evaluator. Larger highlighted points
+            cannot be beaten on both cost and measured quality.
           </p>
         </div>
         <Badge>Strict dominance</Badge>
