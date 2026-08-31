@@ -162,6 +162,8 @@ def _sync(
                 row["id"] for row in payload["data"] if not row["id"].startswith("openrouter/")
             )
             for model_id in model_ids[: config.fener_openrouter_endpoint_limit]:
+                if any(part in {"", ".", ".."} for part in model_id.split("/")):
+                    raise ValueError("Unsafe model endpoint identifier in source response")
                 load(
                     f"https://openrouter.ai/api/v1/models/{quote(model_id, safe='/')}/endpoints",
                     openrouter.normalize_endpoints,

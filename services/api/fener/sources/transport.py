@@ -84,6 +84,7 @@ def fetch(client: httpx.Client, url: str, headers: dict[str, str] | None = None)
     if (
         parsed.scheme != "https"
         or parsed.hostname not in ALLOWED_HOSTS
+        or parsed.port not in {None, 443}
         or parsed.username
         or parsed.password
     ):

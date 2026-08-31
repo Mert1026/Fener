@@ -29,6 +29,8 @@ def test_conditional_fetch_and_ssrf_boundary():
         assert requests[0].headers["if-none-match"] == "revision-1"
         with pytest.raises(ValueError):
             fetch(client, "http://127.0.0.1/internal")
+        with pytest.raises(ValueError):
+            fetch(client, "https://models.dev:8443/admin")
     assert len(requests) == 1
 
 
