@@ -1,0 +1,1 @@
+"""Scheduled source ingestion."""

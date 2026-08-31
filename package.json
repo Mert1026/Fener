@@ -1,0 +1,19 @@
+{
+  "name": "fener",
+  "private": true,
+  "packageManager": "pnpm@11.19.0",
+  "scripts": {
+    "setup": "uv run --locked python scripts/manage.py setup",
+    "start": "uv run --locked python scripts/manage.py dev",
+    "dev": "uv run --locked python scripts/manage.py web",
+    "build": "pnpm --filter @fener/web build",
+    "lint": "pnpm --filter @fener/web lint",
+    "typecheck": "pnpm --filter @fener/web typecheck",
+    "test": "pnpm --filter @fener/web test",
+    "format": "prettier --write \"*.{json,md,yaml,yml}\" .github docs \"apps/web/*.{ts,js,json,md}\" apps/web/app apps/web/components apps/web/lib apps/web/tests apps/web/e2e",
+    "format:check": "prettier --check \"*.{json,md,yaml,yml}\" .github docs \"apps/web/*.{ts,js,json,md}\" apps/web/app apps/web/components apps/web/lib apps/web/tests apps/web/e2e"
+  },
+  "devDependencies": {
+    "prettier": "^3.8.0"
+  }
+}

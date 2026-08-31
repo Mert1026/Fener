@@ -1,0 +1,37 @@
+{
+    "schemaVersion":  1,
+    "taskId":  "TASK-0002",
+    "description":  "hi",
+    "status":  "failed",
+    "dependencies":  [
+
+                     ],
+    "baseCommit":  "3d9a0bba3328dfa89166a399374ec8cffe96e738",
+    "executionClass":  "engineer_normal",
+    "executor":  "engineer_normal",
+    "attempt":  1,
+    "maxAttempts":  3,
+    "risk":  "normal",
+    "acceptanceCriteria":  [
+
+                           ],
+    "verification":  {
+                         "required":  [
+
+                                      ],
+                         "outcomes":  [
+
+                                      ]
+                     },
+    "reviewRequested":  false,
+    "executionClassOverride":  "engineer_normal",
+    "worktree":  null,
+    "failureSignatures":  [
+                              "attempt-failed"
+                          ],
+    "codexCalls":  0,
+    "completionAuthority":  "controller",
+    "createdAtUtc":  "2026-08-31T14:24:24.5476521Z",
+    "updatedAtUtc":  "2026-08-31T14:24:26.6899044Z",
+    "completedAtUtc":  null
+}

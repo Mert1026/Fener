@@ -1,0 +1,9 @@
+{"timestampUtc":"2026-08-31T14:23:55.4089963Z","kind":"task-created","taskId":"TASK-0001","dependencies":[]}
+{"timestampUtc":"2026-08-31T14:23:56.1036799Z","kind":"execution-class-selected","taskId":"TASK-0001","executionClass":"engineer_normal","reason":"Ordinary engineering work defaults to the primary engineer role of the active engineering profile.","completionAuthority":false}
+{"timestampUtc":"2026-08-31T14:24:01.0530722Z","kind":"execution-class-selected","taskId":"TASK-0001","executionClass":"engineer_normal","reason":"Ordinary engineering work defaults to the primary engineer role of the active engineering profile.","completionAuthority":false}
+{"timestampUtc":"2026-08-31T14:24:24.5980074Z","kind":"task-created","taskId":"TASK-0002","dependencies":[]}
+{"timestampUtc":"2026-08-31T14:24:25.2822869Z","kind":"execution-class-selected","taskId":"TASK-0002","executionClass":"engineer_normal","reason":"Ordinary engineering work defaults to the primary engineer role of the active engineering profile.","completionAuthority":false}
+{"timestampUtc":"2026-08-31T14:24:26.6994310Z","kind":"execution-class-selected","taskId":"TASK-0002","executionClass":"engineer_normal","reason":"Ordinary engineering work defaults to the primary engineer role of the active engineering profile.","completionAuthority":false}
+{"timestampUtc":"2026-08-31T15:12:54.0957812Z","kind":"task-created","taskId":"TASK-0003","dependencies":[]}
+{"timestampUtc":"2026-08-31T16:28:30.7567422Z","kind":"task-created","taskId":"TASK-0004","dependencies":[]}
+{"timestampUtc":"2026-08-31T16:28:32.2471868Z","kind":"execution-class-selected","taskId":"TASK-0004","executionClass":"engineer_normal","reason":"Ordinary engineering work defaults to the primary engineer role of the active engineering profile.","completionAuthority":false}

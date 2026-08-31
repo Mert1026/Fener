@@ -1,0 +1,25 @@
+# Security and privacy
+
+Fener is currently designed for one trusted local workspace. Bind services to loopback. Do not expose the API, database or development server to the internet. There is no public account system, tenant isolation, production reverse proxy configuration or completed public-release security review.
+
+Private routes require a server-held `FENER_ADMIN_KEY`. Browser unlock uses an HttpOnly, SameSite=Strict signed cookie with an eight-hour expiry verified on the server. HTTPS sessions set Secure. Rotating the administration key invalidates existing sessions. Logout removes the browser cookie; it does not revoke a copied token before expiry. The key is never put into `NEXT_PUBLIC_*` variables or client bundles.
+
+Mutating browser requests must match the HTTP Host and a trusted local origin. `FENER_WEB_ORIGIN` can set one explicit trusted origin for a deliberately configured deployment; it is not a complete production security setup. Source fetches use an HTTPS allowlist, disallow redirects, bound response size and retry politely. POST bodies are bounded even when streamed. API and unlock attempts are rate limited per process; a public deployment needs shared rate limiting and trusted proxy handling.
+
+Model catalogs, source records and benchmark observations are public read data. Harnesses, roles, policies, telemetry, evaluation prompts/outputs, source job queues, identity review notes and persisted recommendations require authentication. Catalog exports use an explicit allowlist that excludes private tables. Raw upstream catalogs are treated as data, not code or instructions. Links are rendered as text/URLs; charts use non-HTML tooltips.
+
+Telemetry accepts token counts, timings, outcomes, costs and optional numeric quality ratings. It rejects prompt/message fields. Evaluation suites and submitted outputs deliberately store private text. Use synthetic or redacted examples when possible and never submit provider secrets as evaluation content.
+
+Policy versions remain drafts until an explicit approval request includes the selected deployment and a review note. Ingestion and recommendations never change defaults. No automatic paid inference, judge-model calls, AI research crawling or outbound notifications are enabled.
+
+Harness/evaluation screens are currently removed and their API operations return 410 after authentication by default. Their stored history is preserved. They can only be re-enabled deliberately through `FENER_PERSONAL_FEATURES_ENABLED=true`; no data migration deletes their tables.
+
+Manual AI research requires authentication, a server-only `OPENAI_API_KEY`, and explicit cost approval on every request. The approved question is sent to OpenAI Responses/web search with `store=false`, a fixed domain allowlist, up to two tool calls and 2,000 output tokens. Five attempts per rolling 24 hours is the default local limit; failed and uncertain attempts count. A local file lock serializes requests, and request IDs prevent duplicate submissions. These controls are not shared quotas for a multi-host deployment or a fixed monetary budget. HTTP/provider failures never trigger an automatic retry. Notes are private, remain unverified and cannot write canonical facts. Only validated HTTPS citations are linked; source/model text is never executed. Questions must not contain secrets or private documents.
+
+Setup generates a unique random PostgreSQL password and administration key in the ignored `.env`. Compose requires a configured database password and has no shared fallback. CI generates and masks a disposable password for its temporary database. `.env.example` contains no database credential. Changing `POSTGRES_PASSWORD` alone does not rotate an existing PostgreSQL volume: stop Fener, back up, run `uv run python scripts/rotate_db_password.py`, then restart services. The helper updates the configured loopback database role and matching local environment without deleting data. Use URL-safe credentials for the optional Compose app connection URL.
+
+Historical commits may contain the former development/CI password defaults. Removal from current files does not remove Git history or close a secret-scanner incident. Rotate every environment that reused a flagged credential, then review the incident. Rewriting published history or force-pushing requires a separately agreed plan; do not silence the scanner with a blanket exclusion.
+
+Secrets, snapshots, databases, exports and backups are ignored by Git and Docker build contexts. Backups can contain private data and are not encrypted automatically. Protect the workspace with OS permissions and disk encryption. In a fresh non-Windows setup, `.env` is created mode 0600; Windows inherits the user's workspace ACL.
+
+Report vulnerabilities privately to the repository maintainer. Include a minimal redacted reproduction; do not post keys, private prompts, database dumps or exploitable production URLs in public issues.

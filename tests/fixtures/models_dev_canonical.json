@@ -1,0 +1,40 @@
+{
+  "openai/gpt-4o": {
+    "id": "openai/gpt-4o",
+    "name": "GPT-4o",
+    "description": "Omni-era GPT for multimodal chat, practical coding, and general assistants",
+    "family": "gpt",
+    "attachment": true,
+    "reasoning": false,
+    "tool_call": true,
+    "structured_output": true,
+    "temperature": true,
+    "knowledge": "2023-09",
+    "release_date": "2024-05-13",
+    "last_updated": "2024-08-06",
+    "modalities": {
+      "input": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output": [
+        "text"
+      ]
+    },
+    "open_weights": false,
+    "limit": {
+      "context": 128000,
+      "output": 16384
+    },
+    "benchmarks": [
+      {
+        "name": "Aider Polyglot",
+        "score": 23.1,
+        "metric": "percent correct",
+        "source": "https://aider.chat/docs/leaderboards/",
+        "date": "2024-12-30"
+      }
+    ]
+  }
+}
