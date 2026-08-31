@@ -1,9 +1,11 @@
 """Cross-platform local entry point; run from any directory. Never prints secrets."""
 
 import argparse
+import json
 import os
 import secrets
 import shutil
+import socket
 import subprocess
 import sys
 from pathlib import Path
@@ -13,11 +15,25 @@ os.chdir(ROOT)
 os.environ.setdefault("UV_CACHE_DIR", str(ROOT / ".cache" / "uv"))
 
 
-def run(*args: str, **kwargs):
+def resolve_command(args: list[str]) -> list[str]:
     executable = shutil.which(args[0])
+    if executable is None and args[0] == "pnpm":
+        npx = shutil.which("npx")
+        if npx:
+            manager = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))[
+                "packageManager"
+            ]
+            if not manager.startswith("pnpm@"):
+                raise SystemExit("Expected a pinned pnpm packageManager in package.json")
+            return [npx, "--yes", manager, *args[1:]]
+        raise SystemExit("Node.js/npm is required: neither pnpm nor npx was found on PATH.")
     if executable is None:
         raise SystemExit(f"Required command not found: {args[0]}")
-    return subprocess.run([executable, *args[1:]], check=True, **kwargs)
+    return [executable, *args[1:]]
+
+
+def run(*args: str, **kwargs):
+    return subprocess.run(resolve_command(list(args)), check=True, **kwargs)
 
 
 def initialize(sqlite: bool):
@@ -71,7 +87,7 @@ def main():
     args = parser.parse_args()
     commands = {
         "api": ["uv", "run", "uvicorn", "fener.api:app", "--host", "127.0.0.1", "--port", "8000"],
-        "web": ["pnpm", "dev"],
+        "web": ["pnpm", "--filter", "@fener/web", "dev"],
         "worker": ["uv", "run", "fener", "worker"],
     }
     if args.command == "setup":
@@ -79,13 +95,19 @@ def main():
     elif args.command in commands:
         run(*commands[args.command])
     elif args.command == "dev":
+        for port in (8000, 3000):
+            with socket.socket() as connection:
+                connection.settimeout(1)
+                if connection.connect_ex(("127.0.0.1", port)) == 0:
+                    raise SystemExit(
+                        f"Port {port} is already in use. Stop the existing Fener services "
+                        "before starting another stack. No processes were stopped."
+                    )
+        resolved_commands = [resolve_command(command) for command in commands.values()]
         processes = []
         try:
-            for command in commands.values():
-                executable = shutil.which(command[0])
-                if not executable:
-                    raise SystemExit(f"Required command not found: {command[0]}")
-                processes.append(subprocess.Popen([executable, *command[1:]]))
+            for command in resolved_commands:
+                processes.append(subprocess.Popen(command))
             print("Fener: http://127.0.0.1:3000 · API: http://127.0.0.1:8000/docs")
             print("Worker enabled. Ctrl+C stops these services; no inference APIs are called.")
             while all(p.poll() is None for p in processes):
@@ -93,12 +115,24 @@ def main():
                     processes[0].wait(timeout=1)
                 except subprocess.TimeoutExpired:
                     pass
+            failed = next(p for p in processes if p.poll() is not None)
+            raise SystemExit(failed.returncode or 1)
         except KeyboardInterrupt:
             pass
         finally:
             for process in processes:
                 if process.poll() is None:
-                    process.terminate()
+                    if os.name == "nt":
+                        # uv/pnpm launch children; stopping only the wrapper leaves
+                        # servers and workers behind on Windows.
+                        subprocess.run(
+                            ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL,
+                            check=False,
+                        )
+                    else:
+                        process.terminate()
             for process in processes:
                 try:
                     process.wait(timeout=10)

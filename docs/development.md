@@ -1,10 +1,12 @@
 # Development
 
-Requires Python 3.12+, uv 0.11.7, Node 24, pnpm 11.19 and Docker Compose with the Linux engine. Python and JavaScript dependencies are locked in `uv.lock` and `pnpm-lock.yaml`.
+Requires Python 3.12+, uv 0.11.7, Node 24 with npm and Docker Compose with the Linux engine. Python and JavaScript dependencies are locked in `uv.lock` and `pnpm-lock.yaml`. The launcher uses an installed pnpm or falls back to `npx --yes pnpm@11.19.0`, reading the pinned version from `package.json`; no global pnpm installation is required. The first fallback use needs npm registry access.
 
 ## First start
 
 Run `python scripts/manage.py setup`, then `python scripts/manage.py dev` from the repository. Setup is safe to repeat: it preserves your `.env`, creates `.data`, installs dependencies and applies forward migrations. No default administration password is committed. Find the generated `FENER_ADMIN_KEY` in your local `.env` and enter it in Settings to unlock private views. Do not paste keys into issues, screenshots or chats.
+
+The root shortcuts `npm run setup` and `npm start` run the same commands through uv, so manual virtual-environment activation is unnecessary. `npm start` launches the local API, web and worker; `npm run dev` launches only the web. Dependencies still use pnpm and uv, not `npm install`. Keep Docker Desktop and the configured database running; restart a stopped database with `docker compose up -d --wait db` before launching the app. Do not launch a second stack over services already using ports 3000 and 8000.
 
 The API listens on `127.0.0.1:8000`, web on `127.0.0.1:3000`, and PostgreSQL on the configured loopback port. The worker checks schedules every minute; each source defaults to a six-hour interval. A failed source does not prevent other sources from syncing. Stopping the worker leaves manual jobs durably queued.
 

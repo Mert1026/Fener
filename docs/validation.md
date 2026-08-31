@@ -29,3 +29,16 @@ The backend test run has one upstream Starlette deprecation warning concerning i
 - Added context/cost zoom buttons, wheel/pinch zoom, panning, independent axis sliders and reset. Browser checks exercised 2× and 4× zoom, zoom out and full-range reset, including the 390px mobile layout. Wheel, pinch and slider gestures were not separately exercised. Identical coordinates are disclosed as overlapping; values are not jittered or invented.
 - Clarified harness, evaluation and source configuration descriptions. These edits do not introduce an AI research agent or inference executor.
 - Re-ran all checks: 44 backend tests including PostgreSQL, 7 web tests, lint/types/formatting and the production build passed. Alembic reported no schema drift. The live source-status API returned successful models.dev, OpenRouter and LiteLLM imports, with LLM Stats still requiring a key.
+
+## Root startup shortcuts
+
+- Added `npm run setup` and `npm start` as uv-backed shortcuts for the existing setup and full development launcher. Dependency installation remains pnpm/uv; no manual virtual-environment activation is needed.
+- Exercised `npm start`: PostgreSQL was healthy, the API and Next.js started, and the scheduler emitted its startup event. The web page, API readiness and proxied overview all returned 200.
+- A second `npm start` exited with status 1 and a clear occupied-port message before launching children. Startup failures now propagate nonzero status, and Windows cleanup targets the launcher's own child process trees rather than only their uv/pnpm wrappers.
+
+## Startup without global pnpm
+
+- Reproduced the user's command environment with pnpm absent from PATH. The launcher now falls back through npx to the exact `packageManager` version, and resolves required commands before spawning services. Web startup calls the workspace directly to avoid recursive launcher scripts.
+- `npm run setup` completed in that environment: locked dependencies, healthy PostgreSQL and migrations. The full check command passed with 43 backend tests (PostgreSQL skipped while Docker was unavailable), 7 web tests, lint/types and production build. After Docker recovery, the PostgreSQL integration test separately passed and Alembic reported no drift. Fresh test caches were used because the normal Windows pytest cache had incompatible permissions in the verification environment.
+- A bounded `npm start` check without global pnpm returned 200 for the web page, API readiness and proxied overview, which still reported 363 canonical models. Its own process tree was stopped afterward and ports 3000/8000 were verified free for the user's terminal.
+- Docker Desktop independently failed on inaccessible zero-byte AF_UNIX socket reparse points, matching this [upstream report](https://github.com/docker/desktop-feedback/issues/460). With Docker stopped, only verified socket-only runtime directories were renamed to sibling backups: `%LOCALAPPDATA%/Docker/run.fener-backup-20260831`, `%LOCALAPPDATA%/Docker/run.fener-backup-20260831-2`, and `%LOCALAPPDATA%/docker-secrets-engine.fener-backup-20260831`. Docker then started successfully. No database volumes, settings or secret contents were changed, and no factory reset was performed.

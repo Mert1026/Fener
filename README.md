@@ -6,7 +6,20 @@ Source-backed AI model intelligence: discover models, inspect provider deploymen
 
 ## Run locally
 
-Requires Python 3.12+, uv, Node 24, pnpm 11 and Docker Desktop with the Linux engine running.
+Requires Python 3.12+, uv, Node 24 with npm and Docker Desktop with the Linux engine running. A global pnpm installation is optional: the launcher uses `npx` to obtain the exact version pinned in `package.json` when pnpm is missing. The first use needs access to the npm registry.
+
+From the project root, you can use:
+
+```sh
+npm run setup
+npm start
+```
+
+Run setup once on a new checkout (or after dependency/schema changes). `npm start` launches the local development API, web app and scheduler; it is not the production Next.js server. It uses uv to select the project's Python environment, so you do not need to activate `.venv` manually. Keep Docker Desktop and the configured PostgreSQL database running. If the database container is stopped, run `docker compose up -d --wait db` first.
+
+This repository uses **pnpm workspaces**: setup installs the locked web and Python dependencies. `npm install` at the root does not install the full application; use setup or `pnpm install --frozen-lockfile` for the JavaScript workspace. `npm run dev` starts only the web frontend. Stop any previously launched Fener services before starting another full stack.
+
+The equivalent Python commands are:
 
 ```sh
 python scripts/manage.py setup
