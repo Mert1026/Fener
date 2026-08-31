@@ -12,6 +12,8 @@ FastAPI serves versioned REST resources under `/api/v1`. Interactive documentati
 - `GET /observations/{id}`: normalized value, original source record and snapshot reference.
 - `POST /deployments/{id}/cost`: workload calculation with assumptions.
 - `POST /recommendations/preview`: bounded read-only deterministic ranking.
+- `GET /analytics/benchmarks`: comparable normalized evidence, separated by exact version and evaluator.
+- `POST /analytics/frontier`: cost/quality dominance among candidates with complete comparable evidence and the same constraints.
 
 Prices serialize as decimal strings, never binary floating-point money. Dates use ISO timestamps. Unknown fields are null or absent, never fabricated zeros. Error envelopes contain `code`, `message`, and where available `request_id`.
 
@@ -23,10 +25,14 @@ Send `Authorization: Bearer <FENER_ADMIN_KEY>`. Unconfigured authentication disa
 - `POST /recommendations`: audited ranking.
 - `GET/POST /harnesses`: registered systems, roles and observed usage summaries.
 - `POST /harnesses/roles/{id}/policies`: immutable configuration version, initially draft.
+- `GET /harnesses/roles/{id}/policies`: review versioned configurations and approvals, including the deployment chosen at approval time.
 - `POST /harnesses/policies/{id}/approve`: explicit `approve: true`, deployment identifier and human note. Never called automatically.
 - `POST /telemetry/runs`: validated usage, no prompt content. `(harness_id, external_run_id)` is idempotent; changed contents for the same identifier return 409.
 - `GET /telemetry/runs`: recent private usage.
 - `GET /evaluations`, `POST /evaluations/suites`, `POST /evaluations/runs`.
+- `GET/POST /internal/sync`: durable manual source jobs; POST takes a configured `source_id`.
+- `POST /internal/deployments/{id}/identity`: audited canonical assignment with `target_model_id`, `evidence_url` and a review `note`; it does not delete historical model facts.
+- `GET /internal/identity-overrides`: identity review history.
 
 ## Harness example
 

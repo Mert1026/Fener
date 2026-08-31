@@ -58,7 +58,7 @@ def deployment_views(
     limit: int = 200,
     offset: int = 0,
 ) -> list[DeploymentView]:
-    query = select(Deployment, Model.name).join(Model)
+    query = select(Deployment, Model.name, Model.identity_status).join(Model)
     if model_ids is not None:
         query = query.where(Deployment.model_id.in_(model_ids))
     if provider:
@@ -68,12 +68,13 @@ def deployment_views(
         .offset(offset)
         .limit(limit)
     ).all()
-    facts = facts_for(session, "deployment", [row.id for row, _ in rows])
+    facts = facts_for(session, "deployment", [row.id for row, _, _ in rows])
     return [
         DeploymentView(
             id=row.id,
             model_id=row.model_id,
             model_name=name,
+            identity_status=identity_status,
             access_provider=row.access_provider_id,
             upstream_provider=row.upstream_provider_id,
             api_model_id=row.api_model_id,
@@ -81,7 +82,7 @@ def deployment_views(
             listing_kind=row.listing_kind,
             facts=facts[row.id],
         )
-        for row, name in rows
+        for row, name, identity_status in rows
     ]
 
 
@@ -248,7 +249,12 @@ def benchmark_results(
             "source": record.source_id,
             "source_url": record.source_url,
             "observed_at": record.observed_at,
-            "comparable": definition.score_max is not None and definition.score_min is not None,
+            "comparable": definition.score_max is not None
+            and definition.score_min is not None
+            and definition.score_max > definition.score_min
+            and definition.higher_is_better is not None
+            and not definition.version.startswith("unspecified:")
+            and result.evaluator not in {"", "Unspecified by catalog"},
         }
         for result, definition, name, record in rows
     ]

@@ -4,7 +4,7 @@ Organizations identify publishers; providers identify access/inference services.
 
 Source → ingestion run → snapshot → source record → observation is the evidence chain. Native JSON survives normalization. SHA-256 deduplicates raw bytes; fingerprints deduplicate identical records. Retrieval/last-seen is distinct from observation/effective time. Repeated fetches refresh liveness without fabricating price changes.
 
-Query-critical fields are relational. Field observations preserve provenance; prices use NUMERIC(30,12), currency, quantity, unit and metric. Projections point to selected observations. Conflicts link observations and events retain before/after evidence. Ingestion never deletes history.
+Query-critical fields are relational. Field observations preserve provenance; prices use NUMERIC(60,30), native decimal strings, currency, quantity, unit and metric. Projections point to selected observations. Per-source claims record both their first changed observation and last confirming record. Conflicts link observations and events retain before/after evidence. Ingestion never deletes history.
 
 Benchmarks include version, category, owner, scale and direction. Results retain raw score, evaluator and verification. Unknown scales cannot be normalized. Internal evaluations are separate from public benchmarks.
 

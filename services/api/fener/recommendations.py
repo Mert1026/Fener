@@ -5,7 +5,7 @@ from pydantic import Field, model_validator
 
 from fener.api_schemas import DeploymentView, StrictInput
 
-ALGORITHM_VERSION = "flat-cost-evidence-v1"
+ALGORITHM_VERSION = "flat-cost-evidence-v2"
 
 
 class Workload(StrictInput):
@@ -48,6 +48,8 @@ class RecommendationInput(StrictInput):
     weights: dict[str, Decimal] = Field(default_factory=lambda: {"price": Decimal(1)})
     allow_stale: bool = False
     allow_routing_quotes: bool = False
+    allow_unresolved_models: bool = False
+    allow_zero_metered_rates: bool = False
     limit: int = Field(default=10, ge=1, le=30)
 
     @model_validator(mode="after")
@@ -114,6 +116,7 @@ def _estimate_cost(deployment: DeploymentView, workload: Workload) -> dict[str, 
         "missing": missing,
         "assumptions": [
             "Flat listed rates; taxes, purchase fees, unlisted surcharges and tier changes excluded.",
+            "Zero metered rates can require a paid plan, trial credits or quotas; they do not guarantee unlimited free service.",
             "Cached input is subtracted from total input; extra reasoning usage must not also be counted as output.",
             *(
                 ["Marketplace routing quote; selected endpoint can cost more."]
@@ -150,6 +153,8 @@ def recommend(
     for deployment in deployments:
         reasons = []
         facts = deployment.facts
+        if deployment.identity_status != "resolved" and not request.allow_unresolved_models:
+            reasons.append("Canonical model identity is unresolved")
         if request.providers and deployment.access_provider not in request.providers:
             reasons.append("Provider is excluded")
         if deployment.listing_kind == "routing_quote" and not request.allow_routing_quotes:
@@ -170,6 +175,8 @@ def recommend(
         if required_context and (context is None or context.value < required_context):
             reasons.append("Required serving context is not confirmed")
         max_output = facts.get("max_output")
+        if request.workload.output_tokens and max_output is None:
+            reasons.append("Serving output limit is not confirmed")
         if max_output is not None and max_output.value < request.workload.output_tokens:
             reasons.append("Output exceeds serving limit")
         if (
@@ -190,6 +197,14 @@ def recommend(
             reasons.append("Missing prices: " + ", ".join(cost["missing"]))
         elif request.budget is not None and Decimal(cost["estimated_cost"]) > request.budget:
             reasons.append("Monthly budget exceeded")
+        elif (
+            not request.allow_zero_metered_rates
+            and request.workload.requests > 0
+            and Decimal(cost["estimated_cost"]) == 0
+        ):
+            reasons.append(
+                "Zero metered rate requires explicit opt-in; plan fees and quotas may apply"
+            )
         if reasons:
             rejected.append(
                 {

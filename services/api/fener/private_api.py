@@ -129,6 +129,27 @@ class PolicyApproval(StrictInput):
     note: str = Field(min_length=3, max_length=2000)
 
 
+@router.get("/harnesses/roles/{role_id}/policies")
+def role_policies(role_id: str, session: DB) -> list[dict[str, Any]]:
+    return [
+        {
+            "id": p.id,
+            "version": p.version,
+            "configuration": p.configuration,
+            "created_at": p.created_at,
+            "approved_at": p.approved_at,
+            "approved_deployment_id": p.approved_deployment_id,
+            "approval_note": p.approval_note,
+        }
+        for p in session.scalars(
+            select(ModelPolicy)
+            .where(ModelPolicy.role_id == role_id)
+            .order_by(ModelPolicy.version.desc())
+            .limit(100)
+        )
+    ]
+
+
 @router.post("/harnesses/policies/{policy_id}/approve")
 def approve_policy(policy_id: str, request: PolicyApproval, session: DB) -> dict[str, str]:
     policy = session.scalar(

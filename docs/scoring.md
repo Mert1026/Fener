@@ -12,6 +12,8 @@ Current estimates cover flat listed rates. Taxes, credit purchase fees, unlisted
 
 Unknown required capabilities fail closed. Serving context must accommodate both the requested context and input + output workload. Explicit output limits, monthly budget, provider allowlists, open-weight requirements, availability and stale evidence are checked before ranking. Fallbacks come only from candidates satisfying the same constraints; same-model alternatives are preferred among those candidates.
 
+Unresolved model identities and zero metered rates are excluded by default and require explicit opt-in. A zero listed token rate can belong to a paid plan, trial or quota-limited service; it is not proof of unlimited free access. Requested output must have a confirmed serving limit. The algorithm version changes when these eligibility rules change.
+
 ## Weights and coverage
 
 Weights are explicit, nonnegative and must sum to a positive value. Price utility is `1 − cost / maximum eligible cost` (all-free sets receive 1). Latency utility is `1 / (1 + TTFT seconds)`. These are transparent preference functions, not quality measurements. Missing metrics contribute zero weighted utility; the denominator retains all requested weights. Coverage is available requested weight / total requested weight. A zero-coverage candidate cannot be recommended.

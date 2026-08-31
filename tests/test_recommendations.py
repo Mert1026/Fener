@@ -30,6 +30,7 @@ def candidate(id="a", input_price="1", output_price="3", tool=True):
         id=id,
         model_id=id,
         model_name=id,
+        identity_status="resolved",
         access_provider="direct",
         upstream_provider="direct",
         api_model_id=id,
@@ -38,6 +39,7 @@ def candidate(id="a", input_price="1", output_price="3", tool=True):
         facts={
             "availability": fact("available"),
             "context_window": fact(200000),
+            "max_output": fact(16000),
             "tool_calling": fact(tool),
             "price.input_tokens": fact(
                 {"amount": input_price, "currency": "USD", "quantity": 1000000, "unit": "tokens"}
@@ -109,3 +111,19 @@ def test_workload_validation():
         Workload(input_tokens=10, cached_input_tokens=11)
     with pytest.raises(ValidationError):
         Workload(extra_usage={"image": Decimal("NaN")})
+
+
+def test_zero_metered_rates_and_unresolved_identities_require_opt_in():
+    free = candidate(input_price="0", output_price="0")
+    assert recommend([free], RecommendationInput(), {})["recommended"] is None
+    assert (
+        recommend([free], RecommendationInput(allow_zero_metered_rates=True), {})["recommended"]
+        is not None
+    )
+    unknown = candidate()
+    unknown.identity_status = "unresolved"
+    assert recommend([unknown], RecommendationInput(), {})["recommended"] is None
+    assert (
+        recommend([unknown], RecommendationInput(allow_unresolved_models=True), {})["recommended"]
+        is not None
+    )

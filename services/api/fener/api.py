@@ -1,10 +1,13 @@
 import time
 from collections import defaultdict, deque
 from decimal import Decimal
+from functools import lru_cache
 from typing import Annotated, Any, Literal
 from uuid import uuid4
 
 import structlog
+from alembic.config import Config
+from alembic.script import ScriptDirectory
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -146,8 +149,15 @@ def health() -> dict[str, str]:
 
 @app.get("/readyz")
 def ready(session: DB) -> dict[str, str]:
-    session.execute(text("SELECT version_num FROM alembic_version"))
+    versions = set(session.scalars(text("SELECT version_num FROM alembic_version")))
+    if versions != {migration_head()}:
+        raise HTTPException(503, "Database migrations are not current; run alembic upgrade head")
     return {"status": "ready"}
+
+
+@lru_cache
+def migration_head() -> str | None:
+    return ScriptDirectory.from_config(Config("alembic.ini")).get_current_head()
 
 
 @app.get("/api/v1/models", response_model=ModelPage)
@@ -215,11 +225,19 @@ def providers(session: DB) -> list[ProviderView]:
 
 
 @app.get("/api/v1/providers/{provider_id}")
-def provider_detail(provider_id: str, session: DB) -> dict[str, Any]:
+def provider_detail(
+    provider_id: str,
+    session: DB,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(200, ge=1, le=500),
+) -> dict[str, Any]:
     provider = next((p for p in provider_views(session) if p.id == provider_id), None)
     if not provider:
         raise HTTPException(404, "Provider not found")
-    return {"provider": provider, "deployments": deployment_views(session, provider=provider_id)}
+    return {
+        "provider": provider,
+        "deployments": deployment_views(session, provider=provider_id, offset=offset, limit=limit),
+    }
 
 
 @app.get("/api/v1/models/{model_id}/pricing")
@@ -272,8 +290,14 @@ def market_events(
     offset: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
 ) -> list[dict[str, Any]]:
-    query = select(MarketEvent, SourceRecord).join(
-        SourceRecord, MarketEvent.source_record_id == SourceRecord.id
+    query = (
+        select(MarketEvent, SourceRecord, Model.id, Model.name, Deployment.access_provider_id)
+        .join(SourceRecord, MarketEvent.source_record_id == SourceRecord.id)
+        .outerjoin(
+            Deployment,
+            (MarketEvent.entity_type == "deployment") & (MarketEvent.entity_id == Deployment.id),
+        )
+        .outerjoin(Model, Model.id == func.coalesce(Deployment.model_id, MarketEvent.entity_id))
     )
     if event_type:
         query = query.where(MarketEvent.event_type == event_type)
@@ -285,7 +309,10 @@ def market_events(
             "event_type": event.event_type,
             "entity_type": event.entity_type,
             "entity_id": event.entity_id,
-            "title": event.title,
+            "title": f"{name}{' via ' + provider if provider else ''}: {event.title}"
+            if name and event.event_type.endswith("_change")
+            else event.title,
+            "model_id": model_id,
             "old_value": event.old_value,
             "new_value": event.new_value,
             "importance": event.importance,
@@ -293,7 +320,7 @@ def market_events(
             "source": record.source_id,
             "source_url": record.source_url,
         }
-        for event, record in session.execute(
+        for event, record, model_id, name, provider in session.execute(
             query.order_by(MarketEvent.detected_at.desc(), MarketEvent.id)
             .offset(offset)
             .limit(limit)
