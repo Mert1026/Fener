@@ -57,7 +57,7 @@ it("shows local setup instructions and cannot submit without a provider key", as
   ).toBe(true);
 });
 
-it("invalidates approval when refreshed provider configuration changes", async () => {
+it("invalidates approval when the configured Z.ai model changes", async () => {
   const client = new QueryClient();
   vi.mocked(api).mockResolvedValue({ ...config, configured: true });
   renderResearch(client);
@@ -73,8 +73,6 @@ it("invalidates approval when refreshed provider configuration changes", async (
     client.setQueryData(["research"], {
       ...config,
       configured: true,
-      provider: "openai",
-      provider_name: "OpenAI",
       model: "other-model",
     });
   });

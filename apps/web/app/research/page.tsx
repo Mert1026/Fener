@@ -31,7 +31,7 @@ type Run = {
 };
 type Research = {
   configured: boolean;
-  provider: "openai" | "zai";
+  provider: "zai";
   provider_name: string;
   key_env: string;
   request_limits: string;
@@ -227,13 +227,11 @@ export default function ResearchPage() {
                   These usage caps are not a fixed dollar budget. No automatic
                   retries or scheduled AI runs.
                 </p>
-                {query.data.provider === "zai" && (
-                  <p>
-                    Z.ai general API access is required. A Coding Plan
-                    subscription does not establish general API or search
-                    credit. No request goes to OpenRouter or LLM Stats.
-                  </p>
-                )}
+                <p>
+                  Z.ai general API access is required. A Coding Plan
+                  subscription does not establish general API or search credit.
+                  Fener has no other key-based provider integration.
+                </p>
                 <p>{query.data.source_policy}</p>
                 <details>
                   <summary>

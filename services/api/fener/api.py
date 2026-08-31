@@ -52,6 +52,7 @@ from fener.recommendations import (
 )
 from fener.research import router as research_router
 from fener.security import require_admin
+from fener.sources.registry import SOURCES
 from fener.value_comparison import equal_prices
 
 app = FastAPI(
@@ -394,7 +395,9 @@ def sources(session: DB) -> list[dict[str, Any]]:
             "last_success_at": source.last_success_at,
             "interval_seconds": source.interval_seconds,
         }
-        for source in session.scalars(select(Source).order_by(Source.name))
+        for source in session.scalars(
+            select(Source).where(Source.id.in_(SOURCES)).order_by(Source.name)
+        )
     ]
 
 

@@ -5,13 +5,12 @@ from typing import Any
 
 import httpx
 
-OPENAI_RESPONSES = "https://api.openai.com/v1/responses"
 ZAI_SEARCH = "https://api.z.ai/api/paas/v4/web_search"
 ZAI_CHAT = "https://api.z.ai/api/paas/v4/chat/completions"
 
 
 def post_json(endpoint: str, request: dict[str, Any], key: str) -> dict[str, Any]:
-    if endpoint not in {OPENAI_RESPONSES, ZAI_SEARCH, ZAI_CHAT}:
+    if endpoint not in {ZAI_SEARCH, ZAI_CHAT}:
         raise ValueError("Unsupported research endpoint")
     with httpx.Client(timeout=httpx.Timeout(40, connect=10), follow_redirects=False) as client:
         with client.stream(

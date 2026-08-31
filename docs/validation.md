@@ -1,6 +1,13 @@
 # Validation record — 2026-09-01
 
-## Z.ai research provider
+## Z.ai-only provider configuration
+
+- Removed the OpenRouter and LLM Stats catalog integrations and OpenAI research integration from configuration, source registry, source network allowlist, CLI, worker scheduling, API request schema and Settings. The only provider credential is `ZAI_API_KEY`; models.dev and LiteLLM remain active public feeds and need no key.
+- The PostgreSQL source rows for OpenRouter and LLM Stats are disabled and marked `retired`; no queued/running requests existed. Prior facts, raw snapshots and citations were preserved. The public source endpoint and browser Data health view expose only `litellm` and `models_dev`.
+- 68 backend tests passed with PostgreSQL integration enabled and 13 frontend tests passed. Ruff, formatting, mypy, TypeScript, ESLint, OpenAPI generation and the production Next.js build passed. Tests include removed-source fetch rejection, retired-history behavior, daily Z.ai limits, citation URL validation and paused-feature access controls. Removed adapter-specific tests account for the lower backend count.
+- The running stack reported only Z.ai research (`glm-4.7-flash`, configured locally) and rejected an OpenAI research payload with 422 before provider execution. In-app browser checks confirmed the Z.ai-only Settings copy and two active public-source cards with no console errors. No paid Z.ai call was made.
+
+## Earlier Z.ai provider addition (before provider consolidation)
 
 - 80 backend tests passed with PostgreSQL integration enabled. All 13 frontend tests passed, including invalidating approval when the provider/model changes. Ruff, mypy, TypeScript, ESLint, the production Next.js build, authored-file formatting and OpenAPI freshness checks passed.
 - Mocked Z.ai transport tests cover one search followed by one summary, approved-domain excerpt filtering, citations tied to retrieved sources, incomplete output, timeouts, idempotency, no catalog writes and credential isolation. Both catalog connectors reject credentials matching a configured research key before any network request. No paid provider calls were made.

@@ -120,17 +120,13 @@ def test_invalid_source_keeps_raw_snapshot_and_no_models(session, tmp_path):
     assert session.scalar(select(IngestionRun)).status == "failed"
 
 
-def test_missing_key_is_explicit_and_no_network(session, tmp_path):
-    def reject(_):
-        pytest.fail("Missing key must not cause network requests")
-
-    run = sync_source(
-        session,
-        "llm_stats",
-        Settings(fener_snapshot_dir=tmp_path, llm_stats_api_key=""),
-        httpx.Client(transport=httpx.MockTransport(reject)),
-    )
-    assert run.status == "needs_key"
+def test_removed_sources_are_never_fetchable_and_history_is_retired(session, tmp_path):
+    setup_source(session, "openrouter")
+    with pytest.raises(ValueError, match="Unknown source"):
+        sync_source(session, "openrouter", Settings(fener_snapshot_dir=tmp_path))
+    ensure_sources(session, Settings())
+    retired = session.get(Source, "openrouter")
+    assert retired.enabled is False and retired.status == "retired"
 
 
 def test_schedule_configuration_updates_existing_sources(session):

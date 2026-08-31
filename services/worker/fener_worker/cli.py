@@ -62,7 +62,9 @@ def worker() -> None:
         with Session(get_engine()) as session:
             ensure_sources(session, settings())
             process_queue(session, settings())
-            for source in session.scalars(select(Source).where(Source.enabled.is_(True))):
+            for source in session.scalars(
+                select(Source).where(Source.enabled.is_(True), Source.id.in_(SOURCES))
+            ):
                 last = session.scalar(
                     select(func.max(IngestionRun.started_at)).where(
                         IngestionRun.source_id == source.id

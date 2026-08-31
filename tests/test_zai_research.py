@@ -4,10 +4,10 @@ from uuid import uuid4
 import httpx
 import pytest
 from fener import research, zai_research
-from fener.config import Settings, settings
+from fener.config import settings
 from fener.models import Fact, Model
 from fener.private_models import ResearchRun
-from fener.sources.ingestion import sync_source
+from fener.research_sources import source_url
 from pydantic import SecretStr
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -71,10 +71,8 @@ def request_body():
 
 @pytest.fixture
 def configured(client, monkeypatch, tmp_path):
-    monkeypatch.setattr(settings(), "fener_research_provider", "zai")
     monkeypatch.setattr(settings(), "fener_zai_research_model", "glm-4.7-flash")
     monkeypatch.setattr(settings(), "zai_api_key", SecretStr("fixture-zai-never-live"))
-    monkeypatch.setattr(settings(), "openai_api_key", SecretStr("fixture-openai-never-live"))
     monkeypatch.setattr(settings(), "fener_snapshot_dir", tmp_path / "snapshots")
     client.headers.update(AUTH)
     return client
@@ -135,19 +133,24 @@ def test_missing_zai_key_never_falls_back_to_openai_or_catalog_credentials(confi
 
 def test_approval_is_bound_to_provider_and_model(configured, monkeypatch):
     monkeypatch.setattr(research, "fetch_zai_research", lambda *_: pytest.fail("No paid calls"))
-    for overrides in ({"provider": "openai"}, {"model": "different-model"}):
-        assert (
-            configured.post("/api/v1/research", json={**request_body(), **overrides}).status_code
-            == 409
-        )
+    assert (
+        configured.post(
+            "/api/v1/research", json={**request_body(), "provider": "openai"}
+        ).status_code
+        == 422
+    )
+    assert (
+        configured.post(
+            "/api/v1/research", json={**request_body(), "model": "different-model"}
+        ).status_code
+        == 409
+    )
     assert (
         configured.post(
             "/api/v1/research", json={**request_body(), "acknowledge_cost": False}
         ).status_code
         == 422
     )
-    monkeypatch.setattr(settings(), "openrouter_api_key", SecretStr("fixture-zai-never-live"))
-    assert configured.post("/api/v1/research", json=request_body()).status_code == 503
 
 
 @pytest.mark.parametrize("refs", [[99], [True], ["1"], []])
@@ -195,21 +198,32 @@ def test_zai_timeout_is_not_retried_or_redirected_to_another_provider(configured
     assert len(calls) == 2 and all("api.z.ai" in c for c in calls)
 
 
-@pytest.mark.parametrize("source", ["openrouter", "llm_stats"])
-def test_catalog_rejects_known_zai_key_before_network(session, tmp_path, source):
-    config = Settings(
-        _env_file=None,
-        zai_api_key="fixture-zai-never-live",
-        openrouter_api_key="fixture-zai-never-live",
-        llm_stats_api_key="fixture-zai-never-live",
-        fener_snapshot_dir=tmp_path,
+def test_daily_limit_counts_completed_zai_attempts(configured, monkeypatch):
+    monkeypatch.setattr(settings(), "fener_research_daily_limit", 1)
+    report = zai_research.parse_summary(
+        summary_response(), zai_research.search_evidence(search_response())
     )
+    monkeypatch.setattr(research, "fetch_zai_research", lambda *_: report)
+    assert configured.post("/api/v1/research", json=request_body()).status_code == 201
+    assert configured.post("/api/v1/research", json=request_body()).status_code == 429
 
-    def reject(_):
-        pytest.fail("Z.ai key must never be sent to a catalog provider")
 
-    with httpx.Client(transport=httpx.MockTransport(reject)) as transport:
-        run = sync_source(session, source, config, transport)
-    assert run.status == "needs_key"
-    assert "own source credential" in run.error
-    assert "fixture-zai-never-live" not in run.error
+@pytest.mark.parametrize(
+    "url",
+    [
+        "javascript:alert(1)",
+        "https://openai.com.evil.example/x",
+        "https://:password@openai.com/x",
+        "http://openai.com/x",
+        "https://127.0.0.1/x",
+    ],
+)
+def test_research_citation_urls_fail_closed(url):
+    assert source_url(url) is None
+
+
+def test_paused_features_remain_unavailable(client, monkeypatch):
+    monkeypatch.setattr(settings(), "fener_personal_features_enabled", False)
+    client.headers.update(AUTH)
+    for route in ("harnesses", "evaluations", "telemetry/runs"):
+        assert client.get(f"/api/v1/{route}").status_code == 410

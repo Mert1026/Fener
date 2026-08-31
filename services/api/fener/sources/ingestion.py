@@ -3,7 +3,6 @@ from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from decimal import Decimal
 from typing import Any
-from urllib.parse import quote, urlencode
 from uuid import uuid4
 
 import httpx
@@ -15,32 +14,19 @@ from fener.config import Settings
 from fener.db import utcnow
 from fener.evidence import digest
 from fener.models import FetchReceipt, IngestionRun, Snapshot, Source
-from fener.sources import litellm, llm_stats, models_dev, openrouter
+from fener.sources import litellm, models_dev
 from fener.sources.contracts import NormalizedRecord
 from fener.sources.persist import CatalogWriter
-from fener.sources.registry import SOURCES
+from fener.sources.registry import RETIRED_SOURCES, SOURCES
 from fener.sources.transport import LocalSnapshotStore, fetch
 
 log = structlog.get_logger()
 
 
-class MissingCredential(RuntimeError):
-    pass
-
-
-def source_credential(config: Settings, source_id: str) -> str:
-    secret = config.openrouter_api_key if source_id == "openrouter" else config.llm_stats_api_key
-    value = secret.get_secret_value()
-    if value and any(
-        value == other.get_secret_value() for other in (config.zai_api_key, config.openai_api_key)
-    ):
-        raise MissingCredential(
-            f"{source_id} needs its own source credential, not a Z.ai or OpenAI research key. No request was sent."
-        )
-    return value
-
-
 def ensure_sources(session: Session, config: Settings) -> None:
+    for retired in session.scalars(select(Source).where(Source.id.in_(RETIRED_SOURCES))):
+        retired.enabled = False
+        retired.status = "retired"
     for spec in SOURCES.values():
         source = session.get(Source, spec.id)
         if source is None:
@@ -105,8 +91,8 @@ def _sync(
     store = LocalSnapshotStore(config.fener_snapshot_dir)
     normalized: list[tuple[NormalizedRecord, str, str]] = []
 
-    def load(url: str, normalizer: Callable[[Any], list[NormalizedRecord]], auth: str = "") -> Any:
-        headers = {"Authorization": f"Bearer {auth}"} if auth else {}
+    def load(url: str, normalizer: Callable[[Any], list[NormalizedRecord]]) -> Any:
+        headers: dict[str, str] = {}
         last = session.scalar(
             select(FetchReceipt)
             .join(IngestionRun)
@@ -166,42 +152,8 @@ def _sync(
         if source_id == "models_dev":
             load("https://models.dev/models.json", models_dev.normalize_models)
             load(SOURCES[source_id].url, models_dev.normalize)
-        elif source_id == "openrouter":
-            auth = source_credential(config, source_id)
-            payload = load(SOURCES[source_id].url, openrouter.normalize, auth)
-            # Bounded endpoint sampling, deterministic by identifier; catalog quotes remain marked.
-            model_ids = sorted(
-                row["id"] for row in payload["data"] if not row["id"].startswith("openrouter/")
-            )
-            for model_id in model_ids[: config.fener_openrouter_endpoint_limit]:
-                if any(part in {"", ".", ".."} for part in model_id.split("/")):
-                    raise ValueError("Unsafe model endpoint identifier in source response")
-                load(
-                    f"https://openrouter.ai/api/v1/models/{quote(model_id, safe='/')}/endpoints",
-                    openrouter.normalize_endpoints,
-                    auth,
-                )
         elif source_id == "litellm":
             load(SOURCES[source_id].url, litellm.normalize)
-        elif source_id == "llm_stats":
-            auth = source_credential(config, source_id)
-            if not auth:
-                raise MissingCredential(
-                    "Set LLM_STATS_API_KEY in the server .env to enable this source"
-                )
-            cursor = None
-            seen_cursors: set[str] = set()
-            for _ in range(100):
-                query = urlencode({"limit": 100, **({"cursor": cursor} if cursor else {})})
-                payload = load(f"{SOURCES[source_id].url}?{query}", llm_stats.normalize, auth)
-                cursor = payload.get("next_cursor")
-                if not cursor:
-                    break
-                if cursor in seen_cursors:
-                    raise ValueError("Source repeated pagination cursor")
-                seen_cursors.add(cursor)
-            else:
-                raise ValueError("Source exceeded bounded page count")
         if not normalized:
             raise ValueError("Source returned an empty catalog; no canonical changes applied")
         writer = CatalogWriter(session, source_id, utcnow())
@@ -226,14 +178,8 @@ def _sync(
         source = session.get(Source, source_id)
         assert persisted_run is not None and source is not None
         run = persisted_run
-        run.status = source.status = (
-            "needs_key" if isinstance(error, MissingCredential) else "failed"
-        )
-        run.error = (
-            str(error)[:2000]
-            if isinstance(error, MissingCredential)
-            else f"{type(error).__name__}: source fetch or validation failed; inspect raw snapshot and local logs"
-        )
+        run.status = source.status = "failed"
+        run.error = f"{type(error).__name__}: source fetch or validation failed; inspect raw snapshot and local logs"
         if isinstance(error, httpx.HTTPStatusError):
             run.http_status = error.response.status_code
         run.completed_at = utcnow()
@@ -244,8 +190,7 @@ def _sync(
             ingestion_run_id=run.id,
             error_type=type(error).__name__,
         )
-        if not isinstance(error, MissingCredential):
-            raise
+        raise
     finally:
         if own_client:
             client.close()

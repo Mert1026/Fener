@@ -818,9 +818,9 @@ export interface components {
       request_id: string;
       /**
        * Provider
-       * @enum {string}
+       * @constant
        */
-      provider: "openai" | "zai";
+      provider: "zai";
       /** Model */
       model: string;
       /** Query */

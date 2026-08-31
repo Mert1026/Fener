@@ -18,8 +18,6 @@ DOMAINS = [
     "artificialanalysis.ai",
     "aider.chat",
     "livebench.ai",
-    "llm-stats.com",
-    "openrouter.ai",
     "models.dev",
     "z.ai",
 ]

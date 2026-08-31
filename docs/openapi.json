@@ -2388,7 +2388,7 @@
           },
           "provider": {
             "type": "string",
-            "enum": ["openai", "zai"],
+            "const": "zai",
             "title": "Provider"
           },
           "model": {
