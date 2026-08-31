@@ -16,6 +16,16 @@ from fener_worker.jobs import process_queue
 app = typer.Typer(help="Fener ingestion and local administration", no_args_is_help=True)
 
 
+@app.callback()
+def configure_logging() -> None:
+    structlog.configure(
+        processors=[
+            structlog.processors.TimeStamper(fmt="iso"),
+            structlog.processors.JSONRenderer(),
+        ]
+    )
+
+
 @app.command()
 def version() -> None:
     """Show the local platform version."""
@@ -27,12 +37,6 @@ def sync(source: str | None = None) -> None:
     """Sync one source or all sources, independently. Never invokes inference APIs."""
     if source and source not in SOURCES:
         raise typer.BadParameter(f"Choose: {', '.join(SOURCES)}")
-    structlog.configure(
-        processors=[
-            structlog.processors.TimeStamper(fmt="iso"),
-            structlog.processors.JSONRenderer(),
-        ]
-    )
     failures = []
     for source_id in [source] if source else SOURCES:
         try:
@@ -53,6 +57,7 @@ def sync(source: str | None = None) -> None:
 @app.command()
 def worker() -> None:
     """Poll configured per-source schedules; database/OS locks prevent overlapping jobs."""
+    structlog.get_logger().info("worker_started", poll_interval_seconds=60)
     while True:
         with Session(get_engine()) as session:
             ensure_sources(session, settings())
