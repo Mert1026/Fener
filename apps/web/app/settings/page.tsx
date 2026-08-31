@@ -47,9 +47,9 @@ export default function SettingsPage() {
           <h2>Unlock private intelligence</h2>
           <p>
             Use <code>FENER_ADMIN_KEY</code> from your local <code>.env</code>{" "}
-            file to access harnesses, evaluations and detailed data health.
-            Provider API keys stay on the server. The browser receives an
-            HttpOnly session cookie.
+            file to access AI research and detailed data health. Provider API
+            keys stay on the server. The browser receives an HttpOnly session
+            cookie.
           </p>
           <form onSubmit={login}>
             <div className="field">
@@ -101,7 +101,8 @@ export default function SettingsPage() {
             Public models.dev, OpenRouter and LiteLLM catalog syncs work without
             an AI key. LLM Stats needs its own source key; authenticated
             benchmark detail ingestion still needs implementation and
-            verification. AI web research uses a separate OpenAI key.
+            verification. These fields cannot accept a Z.ai key. AI web research
+            uses a separate Z.ai or OpenAI key.
           </p>
         </section>
         <section className="panel settings-panel">
@@ -109,10 +110,16 @@ export default function SettingsPage() {
           <p>
             Search filters the ingested catalog; recommendations use explicit
             rules and evidence. The research desk can make explicitly approved
-            OpenAI web-search calls. Its cited notes stay separate from catalog
-            facts. No scheduled AI calls or automatic data changes run.
+            Z.ai or OpenAI research calls. Its cited notes stay separate from
+            catalog facts. No scheduled AI calls or automatic data changes run.
           </p>
-          <pre className="code-block">{`OPENAI_API_KEY=…\nFENER_RESEARCH_MODEL=gpt-5.4-mini\nFENER_RESEARCH_DAILY_LIMIT=5`}</pre>
+          <pre className="code-block">{`# Z.ai research\nFENER_RESEARCH_PROVIDER=zai\nZAI_API_KEY=…\nFENER_ZAI_RESEARCH_MODEL=glm-4.7-flash\nFENER_RESEARCH_DAILY_LIMIT=5\n\n# Alternative: OpenAI research\n# FENER_RESEARCH_PROVIDER=openai\n# OPENAI_API_KEY=…\n# FENER_RESEARCH_MODEL=gpt-5.4-mini`}</pre>
+          <p>
+            Z.ai uses its general API for one search and one cited summary per
+            approved run. General API/search access may be billed separately
+            from a Coding Plan. Keys are never interchangeable between
+            providers.
+          </p>
           <p>
             Restart the API after configuring these values. Every research run
             requires approval in the research desk. Harnesses and evaluations

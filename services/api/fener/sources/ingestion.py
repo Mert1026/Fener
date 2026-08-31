@@ -28,6 +28,18 @@ class MissingCredential(RuntimeError):
     pass
 
 
+def source_credential(config: Settings, source_id: str) -> str:
+    secret = config.openrouter_api_key if source_id == "openrouter" else config.llm_stats_api_key
+    value = secret.get_secret_value()
+    if value and any(
+        value == other.get_secret_value() for other in (config.zai_api_key, config.openai_api_key)
+    ):
+        raise MissingCredential(
+            f"{source_id} needs its own source credential, not a Z.ai or OpenAI research key. No request was sent."
+        )
+    return value
+
+
 def ensure_sources(session: Session, config: Settings) -> None:
     for spec in SOURCES.values():
         source = session.get(Source, spec.id)
@@ -155,7 +167,7 @@ def _sync(
             load("https://models.dev/models.json", models_dev.normalize_models)
             load(SOURCES[source_id].url, models_dev.normalize)
         elif source_id == "openrouter":
-            auth = config.openrouter_api_key.get_secret_value()
+            auth = source_credential(config, source_id)
             payload = load(SOURCES[source_id].url, openrouter.normalize, auth)
             # Bounded endpoint sampling, deterministic by identifier; catalog quotes remain marked.
             model_ids = sorted(
@@ -172,7 +184,7 @@ def _sync(
         elif source_id == "litellm":
             load(SOURCES[source_id].url, litellm.normalize)
         elif source_id == "llm_stats":
-            auth = config.llm_stats_api_key.get_secret_value()
+            auth = source_credential(config, source_id)
             if not auth:
                 raise MissingCredential(
                     "Set LLM_STATS_API_KEY in the server .env to enable this source"

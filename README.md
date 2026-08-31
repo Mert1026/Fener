@@ -52,9 +52,16 @@ The current live catalog was fetched from real sources. There is no production s
 
 ## Optional AI research
 
-Add `OPENAI_API_KEY` to the ignored root `.env`, restart the API, unlock Settings with your local `FENER_ADMIN_KEY`, and open **AI research**. Never paste provider keys into research questions. Each run sends the approved question to OpenAI and web search and may incur charges. Without a key the catalog and source syncs still work.
+Choose a research provider in the ignored root `.env`, restart Fener, unlock Settings with your local `FENER_ADMIN_KEY`, and open **AI research**. Never paste provider keys into research questions. Every run sends the approved question to the named provider and may incur charges. Public catalog syncs work without a research key.
 
-The default research model is `gpt-5.4-mini`; `FENER_RESEARCH_MODEL` can select another compatible Responses/web-search model. Each request permits up to two web-tool calls and 2,000 output tokens; `FENER_RESEARCH_DAILY_LIMIT` defaults to five attempts in the last 24 hours, including failed/uncertain attempts. These are usage caps, not a dollar budget. No automatic retries or scheduled AI runs occur. Saved notes remain unverified and never overwrite prices, benchmark scores or identities. See [research and security](SECURITY.md).
+| Research provider | Server configuration                                                                                         | Per approved run                                                                                                                |
+| ----------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| Z.ai              | `FENER_RESEARCH_PROVIDER=zai`, `ZAI_API_KEY`, optional `FENER_ZAI_RESEARCH_MODEL` (default `glm-4.7-flash`)  | One `search-prime` request, then one cited summary capped at 2,000 output tokens. Only allowed-domain excerpts reach the model. |
+| OpenAI (default)  | `FENER_RESEARCH_PROVIDER=openai`, `OPENAI_API_KEY`, optional `FENER_RESEARCH_MODEL` (default `gpt-5.4-mini`) | Responses web research with up to two web-tool calls and 2,000 output tokens.                                                   |
+
+Z.ai uses its **general API**, not the Coding Plan endpoint. Model and search access/credit must be available on that account. Z.ai may retrieve broadly; Fener filters results to approved domains before summarization, and does not fetch the full pages. No qualifying excerpts means no summary call. The API key is sent only to Z.ai. It does **not** unlock OpenRouter or LLM Stats: those remain independent catalog services with their own credentials. Known research-key reuse in a catalog credential field is rejected before network access.
+
+`FENER_RESEARCH_DAILY_LIMIT` defaults to five attempts across providers in the last 24 hours, including failed/uncertain attempts. These are usage caps, not a dollar budget. Approval is tied to the displayed provider and model. No automatic retries, provider fallbacks or scheduled AI runs occur. Saved notes remain unverified and never overwrite prices, benchmark scores or identities. See [research and security](SECURITY.md).
 
 ## Source coverage and limits
 

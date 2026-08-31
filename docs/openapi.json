@@ -2386,6 +2386,17 @@
             "format": "uuid",
             "title": "Request Id"
           },
+          "provider": {
+            "type": "string",
+            "enum": ["openai", "zai"],
+            "title": "Provider"
+          },
+          "model": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Model"
+          },
           "query": {
             "type": "string",
             "maxLength": 1500,
@@ -2400,7 +2411,13 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["request_id", "query", "acknowledge_cost"],
+        "required": [
+          "request_id",
+          "provider",
+          "model",
+          "query",
+          "acknowledge_cost"
+        ],
         "title": "ResearchInput"
       },
       "SuiteInput": {

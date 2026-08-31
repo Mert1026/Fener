@@ -10,7 +10,7 @@ Typed catalog API and generated TypeScript schemas; all main navigation views; s
 
 The market feed displays readable cards and numerical price changes, filtering formatting-only events while preserving stored history. Benchmark groups separate score units, retain original report links/dates and surface missing methodology. No source score is guessed or silently rescaled.
 
-Private manual AI research uses cited web search, explicit cost approval, local usage limits and no retries. Notes remain unverified and cannot update the catalog. Live provider execution still needs a local `OPENAI_API_KEY`; only mocked provider flows have been tested. Harness and evaluation screens are removed for now; their authenticated API operations are paused by default and existing history remains intact.
+Private manual AI research supports OpenAI Responses and Z.ai search plus cited summaries, explicit provider/model approval, local usage limits and no retries or fallback. Notes remain unverified and cannot update the catalog. Live provider execution requires the selected provider's key and account access; only mocked provider flows have been tested. A Z.ai key does not authenticate OpenRouter or LLM Stats catalog endpoints. Harness and evaluation screens are removed for now; their authenticated API operations are paused by default and existing history remains intact.
 
 ## Still gated or intentionally unfinished
 

@@ -57,6 +57,8 @@ def configured(client, monkeypatch, tmp_path):
 def request_body():
     return {
         "request_id": str(uuid4()),
+        "provider": "openai",
+        "model": settings().fener_research_model,
         "query": "Check fixture benchmark methodology",
         "acknowledge_cost": True,
     }

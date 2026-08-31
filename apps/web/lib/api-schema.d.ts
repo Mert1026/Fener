@@ -816,6 +816,13 @@ export interface components {
        * Format: uuid
        */
       request_id: string;
+      /**
+       * Provider
+       * @enum {string}
+       */
+      provider: "openai" | "zai";
+      /** Model */
+      model: string;
       /** Query */
       query: string;
       /**

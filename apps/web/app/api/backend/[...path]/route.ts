@@ -59,7 +59,7 @@ async function proxy(
         headers,
         body,
         cache: "no-store",
-        signal: AbortSignal.timeout(60000),
+        signal: AbortSignal.timeout(path[0] === "research" ? 90000 : 60000),
         redirect: "error",
       },
     );

@@ -23,8 +23,8 @@ Prices serialize as decimal strings, never binary floating-point money. Dates us
 
 Send `Authorization: Bearer <FENER_ADMIN_KEY>`. Unconfigured authentication disables private access rather than making it public.
 
-- `GET /research`: configuration readiness and private research history; never returns provider keys.
-- `POST /research`: `request_id` (UUID), `query` (10–1,500 characters), and `acknowledge_cost: true`. Requires local `OPENAI_API_KEY`; returns a saved note/status, never a catalog mutation. Reusing an ID returns its existing attempt; a different query for the same ID conflicts. Daily limits include unsuccessful attempts. Connection failures can leave an `uncertain` result and are never retried automatically.
+- `GET /research`: configured provider/name/model, required key-variable name, local limits, source policy and private history; never returns provider keys. `configured` indicates a local key exists, not verified account access or credit.
+- `POST /research`: `request_id` (UUID), `provider` (`openai` or `zai`), `model`, `query` (10–1,500 characters), and `acknowledge_cost: true`. The approved provider/model must match current server configuration; mismatch returns 409 before any provider call. Requires that provider's local key. Returns a saved note/status, never a catalog mutation. Reusing an ID returns its existing attempt; a different query/provider/model for that ID conflicts. Daily limits span both providers and include unsuccessful attempts. Connection failures can leave an `uncertain` result and are never retried or switched to another provider automatically. Historical notes without provider metadata are identified as OpenAI.
 
 Harness, telemetry and evaluation operations listed below are **paused** and return 410 after authentication unless deliberately re-enabled on the server. The web proxy does not expose them. Existing stored data remains intact. Source jobs and identity review operations continue to work.
 

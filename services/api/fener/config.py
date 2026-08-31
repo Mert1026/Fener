@@ -1,5 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -18,6 +19,9 @@ class Settings(BaseSettings):
     auto_apply_recommendations: bool = False
     fener_personal_features_enabled: bool = False
     openai_api_key: SecretStr = SecretStr("")
+    zai_api_key: SecretStr = SecretStr("")
+    fener_research_provider: Literal["openai", "zai"] = "openai"
+    fener_zai_research_model: str = "glm-4.7-flash"
     fener_research_model: str = "gpt-5.4-mini"
     fener_research_daily_limit: int = Field(default=5, ge=1, le=100)
 

@@ -1,4 +1,14 @@
-# Validation record — 2026-08-31
+# Validation record — 2026-09-01
+
+## Z.ai research provider
+
+- 80 backend tests passed with PostgreSQL integration enabled. All 13 frontend tests passed, including invalidating approval when the provider/model changes. Ruff, mypy, TypeScript, ESLint, the production Next.js build, authored-file formatting and OpenAPI freshness checks passed.
+- Mocked Z.ai transport tests cover one search followed by one summary, approved-domain excerpt filtering, citations tied to retrieved sources, incomplete output, timeouts, idempotency, no catalog writes and credential isolation. Both catalog connectors reject credentials matching a configured research key before any network request. No paid provider calls were made.
+- The local private research endpoint reports Z.ai with `glm-4.7-flash`, a configured key and zero research runs. OpenRouter and LLM Stats credential fields are empty. A configured key means only that a value is present; general API/search access, billing and live response quality remain unverified. No database migration was needed.
+- In-app browser checks confirmed the Z.ai configuration instructions and locked research page. Browser error logs were empty. The private form is component-tested; a live provider-generated report was not visually verified.
+- A scan of 191 project and built client files found no matches for active local credentials. `.env` remains ignored. Existing historical secret-scanner findings were not erased or suppressed.
+
+## Earlier validation — 2026-08-31
 
 ## Data focus, manual research and credential remediation
 
