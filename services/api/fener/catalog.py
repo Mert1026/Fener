@@ -7,14 +7,13 @@ from sqlalchemy.orm import Session
 
 from fener.api_schemas import DeploymentView, EvidenceView, ModelPage, ModelView, ProviderView
 from fener.models import (
-    BenchmarkDefinition,
-    BenchmarkResult,
     CurrentFact,
     Deployment,
     Fact,
     Model,
     ModelAlias,
     Provider,
+    ResearchBenchmark,
     SourceClaim,
     SourceRecord,
 )
@@ -224,47 +223,58 @@ def benchmark_results(
     offset: int = 0,
     group_id: str | None = None,
 ) -> list[dict[str, Any]]:
-    from fener.benchmark_evidence import benchmark_metadata
+    from fener.evidence import digest
 
-    query = (
-        select(BenchmarkResult, BenchmarkDefinition, Model.name, SourceRecord)
-        .join(BenchmarkDefinition, BenchmarkResult.benchmark_id == BenchmarkDefinition.id)
-        .join(Model, BenchmarkResult.model_id == Model.id)
-        .join(SourceRecord, BenchmarkResult.source_record_id == SourceRecord.id)
+    query = select(ResearchBenchmark, Model.name).join(
+        Model, ResearchBenchmark.model_id == Model.id
     )
     if model_id:
-        query = query.where(BenchmarkResult.model_id == model_id)
+        query = query.where(ResearchBenchmark.model_id == model_id)
     rows = session.execute(
-        query.order_by(
-            SourceRecord.last_seen_at.desc(), SourceRecord.observed_at.desc(), BenchmarkResult.id
-        )
+        query.order_by(ResearchBenchmark.created_at.desc(), ResearchBenchmark.id)
     )
     latest = {}
-    for result, definition, name, record in rows:
-        metadata = benchmark_metadata(result, definition, record)
-        if group_id and metadata["group_id"] != group_id:
+    for result, model_name in rows:
+        result_group = digest(result.name.casefold().strip(), result.metric.casefold().strip())
+        if group_id and result_group != group_id:
             continue
-        key = (result.model_id, definition.id, result.evaluator, metadata["metric"])
+        key = (result.model_id, result.name, result.version, result.evaluator, result.metric)
         if key in latest:
             continue
+        issues = ["AI-extracted result requires review against the cited report"]
+        if (
+            result.score_min is None
+            or result.score_max is None
+            or result.score_max <= result.score_min
+        ):
+            issues.append("Documented numeric scale not supplied")
+        elif not result.score_min <= result.score <= result.score_max:
+            issues.append("Score falls outside the documented scale")
+        if result.higher_is_better is None:
+            issues.append("Score direction not supplied")
         latest[key] = {
             "id": result.id,
             "model_id": result.model_id,
-            "model_name": name,
-            "benchmark_id": definition.id,
-            "name": definition.name,
-            "version": definition.version,
-            "category": definition.category,
+            "model_name": model_name,
+            "benchmark_id": digest("zai-research", result.name, result.version),
+            "name": result.name,
+            "version": result.version,
+            "category": result.category,
             "score": str(result.score),
-            "score_min": str(definition.score_min) if definition.score_min is not None else None,
-            "score_max": str(definition.score_max) if definition.score_max is not None else None,
-            "higher_is_better": definition.higher_is_better,
-            "verification": result.verification,
+            "score_min": str(result.score_min) if result.score_min is not None else None,
+            "score_max": str(result.score_max) if result.score_max is not None else None,
+            "higher_is_better": result.higher_is_better,
+            "verification": "ai_extracted_unverified",
             "evaluator": result.evaluator,
-            "source": record.source_id,
-            "source_url": record.source_url,
-            "observed_at": record.observed_at,
-            **metadata,
+            "source": "Z.ai cited research",
+            "source_url": result.source_url,
+            "observed_at": result.created_at,
+            "metric": result.metric,
+            "group_id": result_group,
+            "report_url": result.source_url,
+            "reported_date": result.reported_date,
+            "quality_issues": issues,
+            "comparable": False,
         }
     return sorted(
         latest.values(), key=lambda r: (r["name"], r["metric"], r["model_name"], r["id"])

@@ -47,22 +47,22 @@ export default function BenchmarksPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Benchmark evidence"
-        title="Compare the same measurement."
-        description="Elo, accuracy and win rate measure different things. Results are separated by their reported metric, with original reports attached."
+        eyebrow="Z.ai benchmark research"
+        title="Cited benchmark claims from AI research."
+        description="Only benchmark claims extracted by manually approved Z.ai research appear here. Every result stays unverified until you inspect its cited report."
         action={
           <Link className="button" href="/research">
-            Investigate a result <ArrowUpRight size={13} />
+            Research benchmarks <ArrowUpRight size={13} />
           </Link>
         }
       />
       <div className="info-callout">
         <Info size={18} />
         <div>
-          <strong>Same name does not mean the same scale</strong>For example,
-          GDPval-AA includes both Elo ratings and win-rate reports. They now
-          have separate groups. No guessed conversions, blended scores or
-          rankings across incompatible tests.
+          <strong>AI extraction is not verification</strong>Z.ai must cite an
+          approved source and provide an exact model, metric, score, version and
+          evaluator. Fener keeps these claims out of rankings and
+          recommendations until a future human-review workflow exists.
         </div>
       </div>
       {groups.isPending ? (
@@ -71,7 +71,8 @@ export default function BenchmarksPage() {
         <ErrorState error={groups.error} retry={groups.refetch} />
       ) : !groups.data?.length ? (
         <Empty title="No benchmark evidence yet">
-          Results will appear after a supported source sync.
+          Run a manually approved benchmark investigation in AI research.
+          Catalog source syncs never fill this page.
         </Empty>
       ) : (
         <div className="benchmark-layout">
@@ -126,12 +127,11 @@ export default function BenchmarksPage() {
                       {selected.models} models
                     </p>
                   </div>
-                  <Badge tone="warning">Source-reported</Badge>
+                  <Badge tone="warning">AI-extracted · unverified</Badge>
                 </div>
                 <p className="benchmark-note">
-                  Alphabetical, not a leaderboard. Latest observation per model,
-                  definition, evaluator and metric. Version and test settings
-                  must also match before results can be ranked.
+                  Alphabetical, not a leaderboard. Only cited Z.ai extractions
+                  are shown. Open the original report before relying on a score.
                 </p>
                 {query.isPending ? (
                   <Loading />

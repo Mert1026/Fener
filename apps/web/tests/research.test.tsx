@@ -16,7 +16,7 @@ const config = {
   provider: "zai",
   provider_name: "Z.ai",
   key_env: "ZAI_API_KEY",
-  request_limits: "1 web search and 1 summary, up to 2,000 output tokens",
+  request_limits: "1 web search and 1 summary, up to 8,000 output tokens",
   source_policy: "Only approved-domain excerpts are summarized.",
   model: "fixture-model",
   daily_limit: 5,

@@ -16,7 +16,7 @@ OpenRouter and LLM Stats were removed from the registry, network allowlist, CLI 
 ## Normalization caveats
 
 - Numeric JSON is parsed with Decimal. Both native and normalized values are retained, including unusually precise source values. PostgreSQL NUMERIC(60,30) stores money, and current money projections serialize as decimal strings.
-- models.dev benchmark entries often omit version, scale and evaluator. They remain aggregated, unclassified, non-comparable evidence. No headline quality score or Pareto quality is invented from them.
+- models.dev benchmark fields are retained only inside raw historical snapshots and are not normalized into benchmark tables. The benchmark API accepts only cited Z.ai research extractions.
 - Missing records do not imply deprecation. Only explicit availability claims change availability. Each source record has its own last-seen timestamp.
 - Known canonical IDs and exact deployment identifiers resolve identities. Ambiguous aliases remain source-qualified candidates. No fuzzy merge occurs.
 

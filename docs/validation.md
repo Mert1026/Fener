@@ -1,5 +1,13 @@
 # Validation record — 2026-09-01
 
+## AI-only benchmark research and larger output
+
+- Raised each approved Z.ai summary cap from 2,000 to 8,000 output tokens. The request remains one `search-prime` call plus one summary call, with no retries or scheduled AI work.
+- Active source adapters no longer normalize benchmark rows. Benchmark APIs, model-detail benchmark lists and benchmark groups now read only from the isolated `research_benchmarks` table populated by complete cited Z.ai extractions. The 656 legacy source-ingested results remain stored but are hidden from benchmark and normalized-analytics APIs.
+- AI candidates require bounded decimal strings, complete metric/version/evaluator fields, a valid retrieved-evidence citation and one unique exact catalog model-name match. Results are labeled `ai_extracted_unverified` and always excluded from rankings, normalized quality analytics and recommendations.
+- Migration `b2d17a4f3c91` is applied. The new table currently has zero rows because no paid Z.ai call was made. Live benchmark and normalized-analytics endpoints return empty arrays until the user approves research that yields valid candidates.
+- 69 backend tests passed with PostgreSQL integration enabled; 13 frontend tests, Ruff, formatting, mypy, TypeScript, ESLint, OpenAPI generation and the production Next.js build passed. In-app browser QA confirmed the AI-only empty state with no console errors.
+
 ## Z.ai-only provider configuration
 
 - Removed the OpenRouter and LLM Stats catalog integrations and OpenAI research integration from configuration, source registry, source network allowlist, CLI, worker scheduling, API request schema and Settings. The only provider credential is `ZAI_API_KEY`; models.dev and LiteLLM remain active public feeds and need no key.

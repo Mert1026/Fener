@@ -12,6 +12,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from fener.ai_benchmarks import persist_research_benchmarks
 from fener.api_schemas import StrictInput
 from fener.config import Settings, settings
 from fener.db import session_dependency, utcnow
@@ -42,7 +43,7 @@ def provider_configuration(config: Settings) -> dict[str, Any]:
         "key_env": "ZAI_API_KEY",
         "configured": bool(config.zai_api_key.get_secret_value()),
         "model": config.fener_zai_research_model,
-        "request_limits": "1 web search and 1 summary, up to 2,000 output tokens",
+        "request_limits": "1 web search and 1 summary, up to 8,000 output tokens",
         "source_policy": "Z.ai may search broadly. Only approved-domain excerpts are passed to the model; original pages still need review.",
     }
 
@@ -135,7 +136,7 @@ def research_run(request: ResearchInput, session: DB) -> dict[str, Any]:
                 "search_engine": "search-prime",
                 "max_search_requests": 1,
                 "max_summary_requests": 1,
-                "max_output_tokens": 2000,
+                "max_output_tokens": 8000,
             }
             row = ResearchRun(
                 id=str(request.request_id),
@@ -159,6 +160,9 @@ def research_run(request: ResearchInput, session: DB) -> dict[str, Any]:
                 ) from None
             try:
                 row.report = fetch_zai_research(payload, key)
+                row.report["benchmark_import"] = persist_research_benchmarks(
+                    session, row.id, row.report.get("benchmark_candidates", [])
+                )
                 row.status = "needs_review"
             except httpx.HTTPError:
                 row.status = "uncertain"

@@ -44,7 +44,7 @@ python scripts/manage.py check
 - Overview, model explorer/detail, providers/detail, comparison with deployment selection, cost calculator, benchmarks, market feed and deterministic recommendations with constraints, coverage and fallback chains.
 - Market cards with readable rates and directional changes. Numerically equivalent prices do not create change events; existing formatting-only events are hidden without deleting audit history.
 - Benchmark browsing by name **and reported metric**, with original report links, dates and explicit evidence gaps. Elo and win-rate scores are never shown as one ranking.
-- Optional, private AI research with clickable citations, explicit approval per run, usage caps and no automatic catalog writes. Harness/evaluation screens are removed for now; their API operations are disabled by default and existing data is preserved.
+- Optional, private AI research with clickable citations, explicit approval per run and usage caps. Only complete cited benchmark claims are extracted into a separate unverified table; prices, identities and other catalog facts never change automatically. Harness/evaluation screens are removed for now; their API operations are disabled by default and existing data is preserved.
 - Price/quality normalization and Pareto calculation **only when comparable versioned evidence exists**. Missing methodology produces an explained empty state, never invented points.
 - Same-origin authenticated server proxy, signed expiring sessions, private API boundaries, source allowlists, body limits, rate limits, backups, catalog-only exports and CI.
 
@@ -54,9 +54,11 @@ The current live catalog was fetched from real sources. There is no production s
 
 Add `ZAI_API_KEY` to the ignored root `.env`, restart Fener, unlock Settings with your local `FENER_ADMIN_KEY`, and open **AI research**. Never paste the key into research questions. Every run sends the approved question to Z.ai and may incur charges. This is Fener's only provider API key. Public catalog syncs work without it.
 
-Each approved run makes one Z.ai `search-prime` request followed by one cited summary, capped at 2,000 output tokens. Z.ai uses its **general API**, not the Coding Plan endpoint. Model and search access/credit must be available on that account. Z.ai may retrieve broadly; Fener filters results to approved domains before summarization, and does not fetch the full pages. No qualifying excerpts means no summary call.
+Each approved run makes one Z.ai `search-prime` request followed by one cited summary, capped at 8,000 output tokens. Z.ai uses its **general API**, not the Coding Plan endpoint. Model and search access/credit must be available on that account. Z.ai may retrieve broadly; Fener filters results to approved domains before summarization, and does not fetch the full pages. No qualifying excerpts means no summary call.
 
-`FENER_RESEARCH_DAILY_LIMIT` defaults to five attempts across providers in the last 24 hours, including failed/uncertain attempts. These are usage caps, not a dollar budget. Approval is tied to the displayed provider and model. No automatic retries, provider fallbacks or scheduled AI runs occur. Saved notes remain unverified and never overwrite prices, benchmark scores or identities. See [research and security](SECURITY.md).
+Benchmark pages use only complete benchmark claims extracted from manually approved Z.ai research. Public catalog feeds do not populate benchmarks. Extracted claims require an exact catalog model-name match and a citation, remain labeled unverified, and are excluded from normalized quality scores and recommendations.
+
+`FENER_RESEARCH_DAILY_LIMIT` defaults to five Z.ai attempts in the last 24 hours, including failed/uncertain attempts. These are usage caps, not a dollar budget. Approval is tied to the displayed model. No automatic retries, fallbacks or scheduled AI runs occur. Saved notes and extracted benchmarks remain unverified and never overwrite prices, identities or historical evidence. See [research and security](SECURITY.md).
 
 ## Source coverage and limits
 

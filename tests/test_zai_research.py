@@ -34,7 +34,7 @@ def search_response():
     }
 
 
-def summary_response(refs=None, finish="stop"):
+def summary_response(refs=None, finish="stop", benchmarks=None):
     return {
         "id": "fixture-summary",
         "choices": [
@@ -49,7 +49,8 @@ def summary_response(refs=None, finish="stop"):
                                     "text": "The source excerpt reports the fixture price.",
                                     "sources": [1] if refs is None else refs,
                                 }
-                            ]
+                            ],
+                            "benchmarks": [] if benchmarks is None else benchmarks,
                         }
                     ),
                 },
@@ -94,7 +95,7 @@ def test_zai_routing_uses_only_zai_key_and_saves_citations_without_catalog_write
             return httpx.Response(200, json=search_response())
         assert request.url.path.endswith("/chat/completions")
         assert body["model"] == "glm-4.7-flash"
-        assert body["max_tokens"] == 2000 and "tools" not in body
+        assert body["max_tokens"] == 8000 and "tools" not in body
         assert "UNAPPROVED_CONTENT" not in body["messages"][1]["content"]
         return httpx.Response(200, json=summary_response())
 
@@ -166,6 +167,34 @@ def test_incomplete_or_uncited_summary_is_rejected():
         zai_research.parse_summary(
             summary_response(finish="length"), zai_research.search_evidence(search_response())
         )
+
+
+def test_benchmark_candidates_require_complete_cited_decimal_data():
+    row = {
+        "model_name": "Fixture model",
+        "name": "Fixture benchmark",
+        "version": "1",
+        "category": "coding",
+        "metric": "win rate",
+        "score": "14.0",
+        "evaluator": "Fixture protocol",
+        "source": 1,
+        "reported_date": "2026-01-01",
+        "higher_is_better": True,
+        "score_min": "0",
+        "score_max": "100",
+    }
+    report = zai_research.parse_summary(
+        summary_response(benchmarks=[row]), zai_research.search_evidence(search_response())
+    )
+    assert report["benchmark_candidates"][0]["source_url"] == "https://openai.com/fixture"
+    assert report["benchmark_candidates"][0]["score"] == "14.0"
+    for broken in ({**row, "source": 99}, {**row, "score": "NaN"}, {**row, "version": ""}):
+        with pytest.raises(ValueError):
+            zai_research.parse_summary(
+                summary_response(benchmarks=[broken]),
+                zai_research.search_evidence(search_response()),
+            )
 
 
 def test_no_approved_sources_means_no_summary_request(monkeypatch):

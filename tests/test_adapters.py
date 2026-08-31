@@ -16,6 +16,7 @@ def test_models_dev_catalog_and_canonical_are_separate():
     canonical = models_dev.normalize_models(fixture("models_dev_canonical"))
     listing = models_dev.normalize(fixture("models_dev"))
     assert all(row.canonical and row.provider_id is None for row in canonical)
+    assert all(row.benchmarks == [] for row in canonical)
     assert all(not row.canonical and row.provider_id for row in listing)
     assert listing[0].prices[0].quantity == 1_000_000
 
