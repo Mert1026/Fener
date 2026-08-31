@@ -218,8 +218,14 @@ def provider_views(session: Session) -> list[ProviderView]:
 
 
 def benchmark_results(
-    session: Session, model_id: str | None = None, limit: int = 100, offset: int = 0
+    session: Session,
+    model_id: str | None = None,
+    limit: int | None = 100,
+    offset: int = 0,
+    group_id: str | None = None,
 ) -> list[dict[str, Any]]:
+    from fener.benchmark_evidence import benchmark_metadata
+
     query = (
         select(BenchmarkResult, BenchmarkDefinition, Model.name, SourceRecord)
         .join(BenchmarkDefinition, BenchmarkResult.benchmark_id == BenchmarkDefinition.id)
@@ -229,10 +235,17 @@ def benchmark_results(
     if model_id:
         query = query.where(BenchmarkResult.model_id == model_id)
     rows = session.execute(
-        query.order_by(BenchmarkDefinition.name, Model.name).offset(offset).limit(limit)
+        query.order_by(SourceRecord.last_seen_at.desc(), SourceRecord.observed_at.desc(), BenchmarkResult.id)
     )
-    return [
-        {
+    latest = {}
+    for result, definition, name, record in rows:
+        metadata = benchmark_metadata(result, definition, record)
+        if group_id and metadata["group_id"] != group_id:
+            continue
+        key = (result.model_id, definition.id, result.evaluator, metadata["metric"])
+        if key in latest:
+            continue
+        latest[key] = {
             "id": result.id,
             "model_id": result.model_id,
             "model_name": name,
@@ -249,12 +262,27 @@ def benchmark_results(
             "source": record.source_id,
             "source_url": record.source_url,
             "observed_at": record.observed_at,
-            "comparable": definition.score_max is not None
-            and definition.score_min is not None
-            and definition.score_max > definition.score_min
-            and definition.higher_is_better is not None
-            and not definition.version.startswith("unspecified:")
-            and result.evaluator not in {"", "Unspecified by catalog"},
+            **metadata,
         }
-        for result, definition, name, record in rows
+    return sorted(
+        latest.values(), key=lambda r: (r["name"], r["metric"], r["model_name"], r["id"])
+    )[offset : offset + limit if limit is not None else None]
+
+
+def benchmark_groups(session: Session) -> list[dict[str, Any]]:
+    from collections import defaultdict
+
+    groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in benchmark_results(session, limit=None):
+        groups[row["group_id"]].append(row)
+    return [
+        {
+            "id": id,
+            "name": rows[0]["name"],
+            "metric": rows[0]["metric"],
+            "results": len(rows),
+            "models": len({r["model_id"] for r in rows}),
+            "comparable_results": sum(r["comparable"] for r in rows),
+        }
+        for id, rows in groups.items()
     ]

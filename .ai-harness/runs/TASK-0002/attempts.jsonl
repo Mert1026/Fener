@@ -1,0 +1,2 @@
+{"attemptId":"TASK-0002-A1","taskId":"TASK-0002","workspace":"C:\\Users\\merte\\Documents\\GitHub\\Fener","sequence":1,"executionClass":"engineer_normal","status":"started","startedAtUtc":"2026-08-31T14:24:25.8402286Z","sessionId":"session-93d2e38c-0a2d-4793-b2b3-bc571387c715","startedByTurn":"1"}
+{"attemptId":"TASK-0002-A1","taskId":"TASK-0002","workspace":"C:\\Users\\merte\\Documents\\GitHub\\Fener","sequence":1,"status":"failed","failureSignature":"attempt-failed","evidence":"no adapter registered for provider \"zai-direct\"","timestampUtc":"2026-08-31T14:24:26.5328281Z"}

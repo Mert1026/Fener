@@ -10,9 +10,8 @@ import {
   Boxes,
   Check,
   ChevronRight,
-  CircleDot,
   Compass,
-  FlaskConical,
+  ScanSearch,
   House,
   Layers3,
   Menu,
@@ -44,8 +43,7 @@ const navigation = [
     label: "Intelligence",
     items: [
       { href: "/find", name: "Find a model", icon: Compass },
-      { href: "/harnesses", name: "Harnesses", icon: CircleDot },
-      { href: "/evaluations", name: "Evaluations", icon: FlaskConical },
+      { href: "/research", name: "AI research", icon: ScanSearch },
     ],
   },
   {

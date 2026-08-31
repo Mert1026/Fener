@@ -10,6 +10,19 @@ from sqlalchemy.orm import Mapped, mapped_column
 from fener.db import Base, utcnow
 
 
+class ResearchRun(Base):
+    __tablename__ = "research_runs"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    query: Mapped[str] = mapped_column(Text)
+    model: Mapped[str] = mapped_column(String(100))
+    status: Mapped[str] = mapped_column(String(40), default="running")
+    request: Mapped[dict[str, Any]] = mapped_column(JSON)
+    report: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class Harness(Base):
     __tablename__ = "harnesses"
     id: Mapped[str] = mapped_column(String(36), primary_key=True)

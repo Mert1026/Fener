@@ -101,16 +101,22 @@ export default function SettingsPage() {
             Public models.dev, OpenRouter and LiteLLM catalog syncs work without
             an AI key. LLM Stats needs its own source key; authenticated
             benchmark detail ingestion still needs implementation and
-            verification. Adding a key does not enable AI web research.
+            verification. AI web research uses a separate OpenAI key.
           </p>
         </section>
         <section className="panel settings-panel">
-          <h2>Controlled policy changes</h2>
+          <h2>Manual AI research</h2>
           <p>
             Search filters the ingested catalog; recommendations use explicit
-            rules and evidence. AI web research is not implemented, and models
-            are never switched automatically. Recommendations provide evidence
-            for a human decision. No paid model calls run in the background.
+            rules and evidence. The research desk can make explicitly approved
+            OpenAI web-search calls. Its cited notes stay separate from catalog
+            facts. No scheduled AI calls or automatic data changes run.
+          </p>
+          <pre className="code-block">{`OPENAI_API_KEY=…\nFENER_RESEARCH_MODEL=gpt-5.4-mini\nFENER_RESEARCH_DAILY_LIMIT=5`}</pre>
+          <p>
+            Restart the API after configuring these values. Every research run
+            requires approval in the research desk. Harnesses and evaluations
+            are paused; existing data is preserved.
           </p>
         </section>
       </div>

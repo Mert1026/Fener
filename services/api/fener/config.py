@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     fener_sync_interval_seconds: int = Field(default=21600, ge=3600)
     fener_openrouter_endpoint_limit: int = Field(default=20, ge=0, le=1000)
     auto_apply_recommendations: bool = False
+    fener_personal_features_enabled: bool = False
+    openai_api_key: SecretStr = SecretStr("")
+    fener_research_model: str = "gpt-5.4-mini"
+    fener_research_daily_limit: int = Field(default=5, ge=1, le=100)
 
 
 @lru_cache

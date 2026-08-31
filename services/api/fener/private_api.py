@@ -2,7 +2,7 @@ from decimal import Decimal
 from typing import Annotated, Any, Literal
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import AwareDatetime, Field, HttpUrl, model_validator
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
@@ -29,8 +29,20 @@ from fener.security import require_admin
 from fener.sources.ingestion import ensure_sources
 from fener.sources.registry import SOURCES
 
+
+def personal_features_enabled(request: Request) -> None:
+    if not settings().fener_personal_features_enabled and not request.url.path.startswith(
+        "/api/v1/internal/"
+    ):
+        raise HTTPException(
+            410, "Harnesses and evaluations are paused while Fener focuses on data."
+        )
+
+
 router = APIRouter(
-    prefix="/api/v1", dependencies=[Depends(require_admin)], tags=["Private intelligence"]
+    prefix="/api/v1",
+    dependencies=[Depends(require_admin), Depends(personal_features_enabled)],
+    tags=["Private intelligence"],
 )
 DB = Annotated[Session, Depends(session_dependency)]
 

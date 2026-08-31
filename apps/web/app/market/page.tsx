@@ -18,8 +18,8 @@ export default function MarketPage() {
     <>
       <PageHeader
         eyebrow="Change intelligence"
-        title="Market signals"
-        description="A deterministic record of what changed, when it was observed, and which source reported it."
+        title="The market is moving."
+        description="Price moves, new serving options and capability changes. Every signal links to its source; formatting-only changes are excluded."
       />
       <div className="tabs">
         {[
@@ -28,6 +28,7 @@ export default function MarketPage() {
           { name: "Price changes", value: "price_change" },
           { name: "Deployments", value: "new_deployment" },
           { name: "Capabilities", value: "capability_change" },
+          { name: "Context", value: "context_change" },
         ].map((item) => (
           <button
             key={item.name}
@@ -37,6 +38,17 @@ export default function MarketPage() {
             {item.name}
           </button>
         ))}
+      </div>
+      <div className="market-legend">
+        <span>
+          <i className="legend-dot positive" />
+          Lower prices / expanded capabilities
+        </span>
+        <span>
+          <i className="legend-dot negative" />
+          Higher prices / reduced capabilities
+        </span>
+        <span>Discovery dates are not release dates.</span>
       </div>
       {query.isPending ? (
         <Loading />

@@ -20,6 +20,7 @@ from fener.models import (
     SourceClaim,
     SourceRecord,
 )
+from fener.value_comparison import equal_values
 
 
 def digest(*values: Any) -> str:
@@ -70,7 +71,7 @@ class EvidenceWriter:
         if previous_claim:
             previous_claim.last_seen_at = self.observed_at
             previous_claim.confirming_record_id = record.id
-        if previous is not None and previous.value == value:
+        if previous is not None and equal_values(field, previous.value, value):
             return previous, False
         # Chain the previous observation so A -> B -> A remains three observations.
         fact = Fact(
@@ -103,7 +104,7 @@ class EvidenceWriter:
             self.claims[source_key] = claim
         other_claims = self.by_field[key]
         for other_source, other in other_claims.items():
-            if other_source == self.source_id or other.value == value:
+            if other_source == self.source_id or equal_values(field, other.value, value):
                 continue
             conflict_id = digest("conflict", *sorted([other.id, fact.id]))
             if conflict_id not in self.conflicts:
@@ -159,7 +160,7 @@ class EvidenceWriter:
             )
             self.current[key] = current
             self.session.add(current)
-        if old is not None and old.value != winner.value:
+        if old is not None and not equal_values(field, old.value, winner.value):
             importance = "low"
             event_type = "metadata_change"
             if field.startswith("price."):

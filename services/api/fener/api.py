@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 from fener.analytics import comparable_scores
 from fener.api_schemas import DeploymentView, ModelDetail, ModelPage, ProviderView
 from fener.catalog import (
+    benchmark_groups,
     benchmark_results,
     deployment_views,
     facts_for,
@@ -49,7 +50,9 @@ from fener.recommendations import (
     pareto_ids,
     recommend,
 )
+from fener.research import router as research_router
 from fener.security import require_admin
+from fener.value_comparison import equal_prices
 
 app = FastAPI(
     title="Fener Model Intelligence",
@@ -57,6 +60,7 @@ app = FastAPI(
     description="Source-backed market data and deterministic workload recommendations.",
 )
 app.include_router(private_router)
+app.include_router(research_router)
 DB = Annotated[Session, Depends(session_dependency)]
 Admin = Annotated[None, Depends(require_admin)]
 log = structlog.get_logger()
@@ -278,8 +282,14 @@ def benchmarks(
     model_id: str | None = None,
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
+    group_id: str | None = None,
 ) -> list[dict[str, Any]]:
-    return benchmark_results(session, model_id, limit, offset)
+    return benchmark_results(session, model_id, limit, offset, group_id)
+
+
+@app.get("/api/v1/benchmarks/groups")
+def benchmark_group_list(session: DB) -> list[dict[str, Any]]:
+    return benchmark_groups(session)
 
 
 @app.get("/api/v1/market-events")
@@ -303,29 +313,46 @@ def market_events(
         query = query.where(MarketEvent.event_type == event_type)
     if entity_id:
         query = query.where(MarketEvent.entity_id == entity_id)
-    return [
-        {
-            "id": event.id,
-            "event_type": event.event_type,
-            "entity_type": event.entity_type,
-            "entity_id": event.entity_id,
-            "title": f"{name}{' via ' + provider if provider else ''}: {event.title}"
-            if name and event.event_type.endswith("_change")
-            else event.title,
-            "model_id": model_id,
-            "old_value": event.old_value,
-            "new_value": event.new_value,
-            "importance": event.importance,
-            "detected_at": event.detected_at,
-            "source": record.source_id,
-            "source_url": record.source_url,
-        }
-        for event, record, model_id, name, provider in session.execute(
-            query.order_by(MarketEvent.detected_at.desc(), MarketEvent.id)
-            .offset(offset)
-            .limit(limit)
+    material = []
+    skipped = 0
+    # Filter legacy formatting-only observations before pagination. Raw audit
+    # history stays intact; ingestion prevents new equivalent-price events.
+    for event, record, model_id, name, provider in session.execute(
+        query.order_by(MarketEvent.detected_at.desc(), MarketEvent.id).execution_options(
+            yield_per=200
         )
-    ]
+    ):
+        if event.event_type == "price_change" and equal_prices(event.old_value, event.new_value):
+            continue
+        if skipped < offset:
+            skipped += 1
+            continue
+        material.append(
+            {
+                "id": event.id,
+                "event_type": event.event_type,
+                "entity_type": event.entity_type,
+                "entity_id": event.entity_id,
+                "title": f"{name}{' via ' + provider if provider else ''}: {event.title}"
+                if name and event.event_type.endswith("_change")
+                else event.title,
+                "model_id": model_id,
+                "model_name": name,
+                "provider": provider,
+                "change_field": event.title.removesuffix(" changed").replace(" ", "_")
+                if event.event_type.endswith("_change")
+                else None,
+                "old_value": event.old_value,
+                "new_value": event.new_value,
+                "importance": event.importance,
+                "detected_at": event.detected_at,
+                "source": record.source_id,
+                "source_url": record.source_url,
+            }
+        )
+        if len(material) >= limit:
+            break
+    return material
 
 
 @app.get("/api/v1/observations/{observation_id}")

@@ -13,9 +13,7 @@ const allowed = new Set([
   "overview",
   "recommendations",
   "data-health",
-  "harnesses",
-  "telemetry",
-  "evaluations",
+  "research",
   "internal",
   "analytics",
 ]);

@@ -1,4 +1,5 @@
 import pytest
+from fener.config import settings
 from fener.models import Deployment, Model, Provider
 from sqlalchemy.orm import Session
 
@@ -6,7 +7,8 @@ AUTH = {"Authorization": "Bearer test-admin-key"}
 
 
 @pytest.fixture
-def private(client):
+def private(client, monkeypatch):
+    monkeypatch.setattr(settings(), "fener_personal_features_enabled", True)
     with Session(client.test_engine) as session:
         session.add(Model(id="model", identity_key="canonical:test", name="Fixture model"))
         session.add(Provider(id="provider", name="Fixture provider"))

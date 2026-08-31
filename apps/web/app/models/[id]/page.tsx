@@ -210,15 +210,22 @@ export default function ModelDetailPage({
                       <td>
                         {row.name}
                         <small className="muted" style={{ display: "block" }}>
-                          {row.version}
+                          {row.metric}
                         </small>
                       </td>
-                      <td className="mono">{row.score}</td>
+                      <td className="mono">
+                        {row.score.replace(/(\.\d*?[1-9])0+$|\.0+$/, "$1")}
+                      </td>
                       <td>
                         <Badge tone="warning">{row.verification}</Badge>
                       </td>
                       <td>
-                        <SourceLink source={row.source} url={row.source_url} />
+                        <SourceLink
+                          source={
+                            row.report_url ? "Original report" : row.source
+                          }
+                          url={row.report_url ?? row.source_url}
+                        />
                       </td>
                     </tr>
                   ))}

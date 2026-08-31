@@ -6,7 +6,7 @@ export function PrivateGate() {
       <LockKeyhole size={20} />
       <div>
         <strong>This is your private intelligence.</strong>Unlock the workspace
-        to access harnesses, telemetry and evaluations. These records are never
+        to run cited research and manage source syncs. These records are never
         part of the public model catalog.
         <br />
         <Link

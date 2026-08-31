@@ -48,7 +48,7 @@ test("private pages fail closed and the mobile navigation works", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/harnesses");
+  await page.goto("/research");
   await expect(
     page.getByText("This is your private intelligence.", { exact: true }),
   ).toBeVisible();

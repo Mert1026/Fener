@@ -55,6 +55,9 @@ export type MarketEvent = {
   entity_type: string;
   entity_id: string;
   model_id: string | null;
+  model_name: string | null;
+  provider: string | null;
+  change_field: string | null;
   title: string;
   old_value: unknown;
   new_value: unknown;
@@ -86,6 +89,11 @@ export type Benchmark = {
   source: string;
   source_url: string;
   comparable: boolean;
+  metric: string;
+  group_id: string;
+  report_url: string | null;
+  reported_date: string | null;
+  quality_issues: string[];
 };
 export type Ranked = {
   deployment: Deployment;

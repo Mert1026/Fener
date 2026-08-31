@@ -6,6 +6,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from fener.benchmark_evidence import benchmark_metadata
 from fener.models import BenchmarkDefinition, BenchmarkResult, SourceRecord
 
 
@@ -31,18 +32,15 @@ def comparable_scores(
             BenchmarkDefinition.score_max.is_not(None),
             BenchmarkDefinition.higher_is_better.is_not(None),
         )
-        .order_by(SourceRecord.observed_at.desc(), BenchmarkResult.id)
+        .order_by(SourceRecord.last_seen_at.desc(), SourceRecord.observed_at.desc(), BenchmarkResult.id)
     )
     for result, definition, record in rows:
-        if (
-            definition.version.startswith("unspecified:")
-            or not definition.version
-            or result.evaluator in {"", "Unspecified by catalog"}
-        ):
+        metadata = benchmark_metadata(result, definition, record)
+        if not metadata["comparable"]:
             continue
         # Evaluators remain separate: the key includes an exact benchmark
         # version AND evaluator, preventing silent averaging across protocols.
-        key = f"{definition.id}:{result.evaluator}"
+        key = f"{definition.id}:{result.evaluator}:{metadata['group_id']}"
         pair = (result.model_id, key)
         if pair in seen:
             continue
@@ -68,6 +66,8 @@ def comparable_scores(
                 "name": definition.name,
                 "version": definition.version,
                 "evaluator": result.evaluator,
+                "score_metric": metadata["metric"],
+                "report_url": metadata["report_url"],
                 "normalized_score": str(value),
                 "source": record.source_id,
                 "source_url": record.source_url,
