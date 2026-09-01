@@ -259,11 +259,21 @@ class BenchmarkResult(Base):
 
 
 class ResearchBenchmark(Base):
-    """Unverified benchmark claim extracted from a cited, approved Z.ai run."""
+    """Unverified benchmark claim extracted from cited AI research."""
 
     __tablename__ = "research_benchmarks"
+    __table_args__ = (
+        CheckConstraint(
+            "(research_run_id IS NOT NULL AND refresh_item_id IS NULL) OR "
+            "(research_run_id IS NULL AND refresh_item_id IS NOT NULL)",
+            name="one_origin",
+        ),
+    )
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    research_run_id: Mapped[str] = mapped_column(ForeignKey("research_runs.id"), index=True)
+    research_run_id: Mapped[str | None] = mapped_column(ForeignKey("research_runs.id"), index=True)
+    refresh_item_id: Mapped[str | None] = mapped_column(
+        ForeignKey("benchmark_refresh_items.id"), index=True
+    )
     model_id: Mapped[str] = mapped_column(ForeignKey("models.id"), index=True)
     name: Mapped[str] = mapped_column(String(300), index=True)
     version: Mapped[str] = mapped_column(String(100))

@@ -1,12 +1,14 @@
 # Validation record — 2026-09-01
 
-## AI-only benchmark research and larger output
+## Catalog-wide AI benchmark refresh and larger manual output
 
-- Raised each approved Z.ai summary cap from 2,000 to 8,000 output tokens. The request remains one `search-prime` call plus one summary call, with no retries or scheduled AI work.
-- Active source adapters no longer normalize benchmark rows. Benchmark APIs, model-detail benchmark lists and benchmark groups now read only from the isolated `research_benchmarks` table populated by complete cited Z.ai extractions. The 656 legacy source-ingested results remain stored but are hidden from benchmark and normalized-analytics APIs.
-- AI candidates require bounded decimal strings, complete metric/version/evaluator fields, a valid retrieved-evidence citation and one unique exact catalog model-name match. Results are labeled `ai_extracted_unverified` and always excluded from rankings, normalized quality analytics and recommendations.
-- Migration `b2d17a4f3c91` is applied. The new table currently has zero rows because no paid Z.ai call was made. Live benchmark and normalized-analytics endpoints return empty arrays until the user approves research that yields valid candidates.
-- 69 backend tests passed with PostgreSQL integration enabled; 13 frontend tests, Ruff, formatting, mypy, TypeScript, ESLint, OpenAPI generation and the production Next.js build passed. In-app browser QA confirmed the AI-only empty state with no console errors.
+- Raised each approved manual Z.ai summary cap from 2,000 to 8,000 output tokens. Manual research still saves a private note only and never fills benchmark tables.
+- Added one authenticated **Update all benchmarks** action that snapshots every resolved catalog model into a durable queue. The worker researches one model at a time with at most one search and one 2,000-token summary. The UI shows model/result/failure progress and warns that a full refresh can take hours and incur substantial API charges.
+- Queue request IDs are idempotent. A second worker cannot duplicate a healthy in-flight request; an abandoned request is marked uncertain only after a five-minute safety window and is never retried automatically. No scheduled AI refresh was added.
+- Active source adapters no longer normalize benchmark rows. Benchmark APIs, model-detail benchmark lists and benchmark groups read only from the isolated `research_benchmarks` table populated by complete cited catalog-refresh claims. The 656 legacy source-ingested results remain stored but are hidden from benchmark and normalized-analytics APIs.
+- AI candidates require bounded decimal strings, complete metric/version/evaluator fields, a valid retrieved-evidence citation and an exact match to the queued catalog model name. Results are labeled `ai_extracted_unverified` and always excluded from rankings, normalized quality analytics and recommendations. The UI links the original cited report rather than presenting Z.ai as the benchmark source.
+- Migrations `b2d17a4f3c91`, `c9036f1a52de` and `d71a6e4c8b12` define the isolated benchmark storage, durable refresh queue and one-origin integrity constraint. The AI benchmark table currently has zero rows because no paid Z.ai call was made. Live benchmark and normalized-analytics endpoints remain empty until the user presses the button and valid claims are returned.
+- 73 backend tests passed with PostgreSQL integration enabled before the final one-origin constraint hardening. Final verification passed 73 backend tests with the PostgreSQL test skipped after Docker became unavailable, plus a fresh SQLite upgrade/schema-check/downgrade/re-upgrade cycle through both new migrations. All 14 frontend tests, Ruff, formatting, mypy, TypeScript, ESLint, OpenAPI generation and the production Next.js build passed. Provider behavior was exercised with mocks only. In-app browser QA confirmed the locked button, cost warning and empty state with no console errors.
 
 ## Z.ai-only provider configuration
 

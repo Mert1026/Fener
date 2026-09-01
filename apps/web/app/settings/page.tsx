@@ -117,9 +117,10 @@ export default function SettingsPage() {
           <p>
             Z.ai uses its general API for one search and one cited summary per
             approved run. General API/search access may be billed separately
-            from a Coding Plan. This is the only API key Fener uses. Complete,
-            cited benchmark claims are extracted into the benchmark desk as
-            unverified AI data; public catalog feeds do not fill benchmarks.
+            from a Coding Plan. This is the only API key Fener uses. The
+            Benchmarks page has a separate Update all benchmarks action that
+            queues every resolved model; public catalog feeds do not fill
+            benchmarks.
           </p>
           <p>
             Restart the API after configuring these values. Every research run

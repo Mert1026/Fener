@@ -11,8 +11,14 @@ from fener.models import Model, ResearchBenchmark
 
 
 def persist_research_benchmarks(
-    session: Session, research_run_id: str, candidates: list[dict[str, Any]]
+    session: Session,
+    candidates: list[dict[str, Any]],
+    *,
+    research_run_id: str | None = None,
+    refresh_item_id: str | None = None,
 ) -> dict[str, Any]:
+    if (research_run_id is None) == (refresh_item_id is None):
+        raise ValueError("Exactly one benchmark research origin is required")
     by_name: dict[str, list[Model]] = {}
     for model in session.scalars(select(Model)):
         by_name.setdefault(model.name.casefold().strip(), []).append(model)
@@ -29,13 +35,15 @@ def persist_research_benchmarks(
             )
             continue
         model = matches[0]
-        row_id = digest("zai-research-benchmark", research_run_id, index, candidate)
+        origin = research_run_id or refresh_item_id
+        row_id = digest("ai-research-benchmark", origin, index, candidate)
         if session.get(ResearchBenchmark, row_id) is not None:
             continue
         session.add(
             ResearchBenchmark(
                 id=row_id,
                 research_run_id=research_run_id,
+                refresh_item_id=refresh_item_id,
                 model_id=model.id,
                 name=candidate["name"],
                 version=candidate["version"],

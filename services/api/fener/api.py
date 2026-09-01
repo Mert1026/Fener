@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 
 from fener.analytics import comparable_scores
 from fener.api_schemas import DeploymentView, ModelDetail, ModelPage, ProviderView
+from fener.benchmark_refresh_api import router as benchmark_refresh_router
 from fener.catalog import (
     benchmark_groups,
     benchmark_results,
@@ -62,6 +63,7 @@ app = FastAPI(
 )
 app.include_router(private_router)
 app.include_router(research_router)
+app.include_router(benchmark_refresh_router)
 DB = Annotated[Session, Depends(session_dependency)]
 Admin = Annotated[None, Depends(require_admin)]
 log = structlog.get_logger()

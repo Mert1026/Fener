@@ -24,10 +24,6 @@ type Run = {
   error: string | null;
   report: null | {
     evidence_scope?: string;
-    benchmark_import?: {
-      imported: number;
-      skipped: { model_name: string; reason: string }[];
-    };
     blocks: { text: string; url?: string; title?: string }[][];
     sources: { url: string; title: string }[];
     usage: { input_tokens?: number; output_tokens?: number };
@@ -86,7 +82,7 @@ export default function ResearchPage() {
       <PageHeader
         eyebrow="Research desk"
         title="Find the source. Check the claim."
-        description="Investigate benchmark methodology, pricing changes and missing model facts with cited web research. Complete benchmark claims are extracted into the benchmark desk as unverified AI data."
+        description="Investigate pricing changes, missing model facts and individual methodology questions with cited web research. Use the Benchmarks page to update the entire catalog."
       />
       <div className="info-callout">
         <ShieldCheck size={19} />
@@ -225,9 +221,7 @@ export default function ResearchPage() {
                     failures
                   </dd>
                   <dt>Data writes</dt>
-                  <dd>
-                    Private note + cited, unverified benchmark claims only
-                  </dd>
+                  <dd>Private research note only</dd>
                 </dl>
                 <p>
                   These usage caps are not a fixed dollar budget. No automatic
@@ -287,18 +281,6 @@ export default function ResearchPage() {
                     )}
                     {run.report && (
                       <>
-                        {run.report.benchmark_import && (
-                          <p className="info-callout">
-                            {run.report.benchmark_import.imported} cited
-                            benchmark
-                            {run.report.benchmark_import.imported === 1
-                              ? " claim"
-                              : " claims"}{" "}
-                            added as unverified AI data.
-                            {run.report.benchmark_import.skipped.length > 0 &&
-                              ` ${run.report.benchmark_import.skipped.length} skipped because the model name did not uniquely match the catalog.`}
-                          </p>
-                        )}
                         {run.report.evidence_scope && (
                           <p className="small">{run.report.evidence_scope}</p>
                         )}

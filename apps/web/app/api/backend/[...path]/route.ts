@@ -7,6 +7,7 @@ const allowed = new Set([
   "providers",
   "deployments",
   "benchmarks",
+  "benchmark-refresh",
   "market-events",
   "observations",
   "sources",

@@ -266,7 +266,7 @@ def benchmark_results(
             "higher_is_better": result.higher_is_better,
             "verification": "ai_extracted_unverified",
             "evaluator": result.evaluator,
-            "source": "Z.ai cited research",
+            "source": "AI benchmark research",
             "source_url": result.source_url,
             "observed_at": result.created_at,
             "metric": result.metric,

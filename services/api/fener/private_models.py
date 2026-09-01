@@ -23,6 +23,32 @@ class ResearchRun(Base):
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+class BenchmarkRefresh(Base):
+    __tablename__ = "benchmark_refreshes"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    status: Mapped[str] = mapped_column(String(30), default="queued", index=True)
+    model: Mapped[str] = mapped_column(String(100))
+    total_models: Mapped[int]
+    processed_models: Mapped[int] = mapped_column(default=0)
+    imported_results: Mapped[int] = mapped_column(default=0)
+    failed_models: Mapped[int] = mapped_column(default=0)
+    error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class BenchmarkRefreshItem(Base):
+    __tablename__ = "benchmark_refresh_items"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    refresh_id: Mapped[str] = mapped_column(ForeignKey("benchmark_refreshes.id"), index=True)
+    model_id: Mapped[str] = mapped_column(ForeignKey("models.id"), index=True)
+    status: Mapped[str] = mapped_column(String(30), default="queued", index=True)
+    imported_results: Mapped[int] = mapped_column(default=0)
+    error: Mapped[str | None] = mapped_column(Text)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class Harness(Base):
     __tablename__ = "harnesses"
     id: Mapped[str] = mapped_column(String(36), primary_key=True)

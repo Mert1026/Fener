@@ -12,7 +12,6 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from fener.ai_benchmarks import persist_research_benchmarks
 from fener.api_schemas import StrictInput
 from fener.config import Settings, settings
 from fener.db import session_dependency, utcnow
@@ -160,9 +159,6 @@ def research_run(request: ResearchInput, session: DB) -> dict[str, Any]:
                 ) from None
             try:
                 row.report = fetch_zai_research(payload, key)
-                row.report["benchmark_import"] = persist_research_benchmarks(
-                    session, row.id, row.report.get("benchmark_candidates", [])
-                )
                 row.status = "needs_review"
             except httpx.HTTPError:
                 row.status = "uncertain"

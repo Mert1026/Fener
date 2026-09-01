@@ -73,7 +73,7 @@ def test_benchmark_api_uses_only_cited_ai_extractions(session):
     )
     session.commit()
     run = research_run(session)
-    result = persist_research_benchmarks(session, run.id, [candidate()])
+    result = persist_research_benchmarks(session, [candidate()], research_run_id=run.id)
     session.commit()
     assert result == {"imported": 1, "skipped": []}
     groups = benchmark_groups(session)
@@ -81,7 +81,7 @@ def test_benchmark_api_uses_only_cited_ai_extractions(session):
     row = benchmark_results(session, group_id=groups[0]["id"])[0]
     assert row["name"] != "Legacy benchmark"
     assert row["score"] == "14.00000000"
-    assert row["source"] == "Z.ai cited research"
+    assert row["source"] == "AI benchmark research"
     assert row["report_url"] == "https://aider.chat/docs/leaderboards/"
     assert row["verification"] == "ai_extracted_unverified"
     assert row["comparable"] is False
@@ -93,7 +93,9 @@ def test_ai_benchmark_requires_unique_exact_catalog_model_name(session):
     setup_source(session)
     write(session, "1")
     run = research_run(session)
-    result = persist_research_benchmarks(session, run.id, [candidate("Unknown model")])
+    result = persist_research_benchmarks(
+        session, [candidate("Unknown model")], research_run_id=run.id
+    )
     session.commit()
     assert result["imported"] == 0
     assert result["skipped"][0]["reason"] == "No unique exact catalog model-name match"

@@ -11,6 +11,7 @@ from fener.sources.registry import SOURCES
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from fener_worker.benchmark_jobs import process_benchmark_refresh
 from fener_worker.jobs import process_queue
 
 app = typer.Typer(help="Fener ingestion and local administration", no_args_is_help=True)
@@ -62,6 +63,14 @@ def worker() -> None:
         with Session(get_engine()) as session:
             ensure_sources(session, settings())
             process_queue(session, settings())
+            try:
+                benchmark_work = process_benchmark_refresh(session, settings())
+            except Exception as error:
+                session.rollback()
+                benchmark_work = 0
+                structlog.get_logger().error(
+                    "benchmark_refresh_failed", error_type=type(error).__name__
+                )
             for source in session.scalars(
                 select(Source).where(Source.enabled.is_(True), Source.id.in_(SOURCES))
             ):
@@ -84,4 +93,4 @@ def worker() -> None:
                         source_id=source.id,
                         error_type=type(error).__name__,
                     )
-        time.sleep(60)
+        time.sleep(2 if benchmark_work else 60)

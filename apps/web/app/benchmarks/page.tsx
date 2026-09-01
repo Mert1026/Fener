@@ -1,10 +1,10 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Decimal from "decimal.js";
-import { useQuery } from "@tanstack/react-query";
-import { Info, ArrowUpRight, Search } from "lucide-react";
-import { api, type Benchmark } from "@/lib/api";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Info, Search, RefreshCw } from "lucide-react";
+import { api, isPrivateLocked, type Benchmark } from "@/lib/api";
 import { date } from "@/lib/format";
 import {
   Badge,
@@ -24,7 +24,22 @@ type Group = {
   models: number;
   comparable_results: number;
 };
+type RefreshState = {
+  configured: boolean;
+  model: string;
+  refresh: null | {
+    id: string;
+    status: string;
+    total_models: number;
+    processed_models: number;
+    imported_results: number;
+    failed_models: number;
+    current_model: string | null;
+    error: string | null;
+  };
+};
 export default function BenchmarksPage() {
+  const client = useQueryClient();
   const [chosen, setChosen] = useState("");
   const [search, setSearch] = useState("");
   const [offset, setOffset] = useState(0);
@@ -32,6 +47,34 @@ export default function BenchmarksPage() {
     queryKey: ["benchmark-groups"],
     queryFn: () => api<Group[]>("benchmarks/groups"),
   });
+  const refresh = useQuery({
+    queryKey: ["benchmark-refresh"],
+    queryFn: () => api<RefreshState>("benchmark-refresh"),
+    retry: false,
+    refetchInterval: (query) =>
+      ["queued", "running", "blocked"].includes(
+        query.state.data?.refresh?.status ?? "",
+      )
+        ? 5000
+        : false,
+  });
+  const update = useMutation({
+    mutationFn: () =>
+      api<RefreshState>("benchmark-refresh", {
+        method: "POST",
+        body: JSON.stringify({
+          request_id: crypto.randomUUID(),
+          acknowledge_cost: true,
+        }),
+      }),
+    onSuccess: (data) => client.setQueryData(["benchmark-refresh"], data),
+  });
+  useEffect(() => {
+    if (refresh.data?.refresh?.processed_models) {
+      client.invalidateQueries({ queryKey: ["benchmark-groups"] });
+      client.invalidateQueries({ queryKey: ["benchmarks"] });
+    }
+  }, [client, refresh.data?.refresh?.processed_models]);
   const choices = (groups.data ?? []).filter((g) =>
     `${g.name} ${g.metric}`.toLowerCase().includes(search.toLowerCase()),
   );
@@ -47,21 +90,79 @@ export default function BenchmarksPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Z.ai benchmark research"
-        title="Cited benchmark claims from AI research."
-        description="Only benchmark claims extracted by manually approved Z.ai research appear here. Every result stays unverified until you inspect its cited report."
-        action={
-          <Link className="button" href="/research">
-            Research benchmarks <ArrowUpRight size={13} />
-          </Link>
-        }
+        eyebrow="Benchmark intelligence"
+        title="Research benchmarks for the whole catalog."
+        description="Update runs AI research across every resolved catalog model and adds complete cited benchmark claims. Every result stays unverified until you inspect its original report."
       />
+      <section className="panel settings-panel" style={{ marginBottom: 20 }}>
+        <div className="panel-header">
+          <div>
+            <h2>Catalog-wide benchmark update</h2>
+            <p>
+              One click queues every resolved model. Each model can use one web
+              search and one summary request, so a full update may take hours
+              and incur substantial API charges. Failed or interrupted items are
+              not retried automatically.
+            </p>
+          </div>
+          {isPrivateLocked(refresh.error) ? (
+            <Link className="button" href="/settings">
+              Unlock to update
+            </Link>
+          ) : (
+            <button
+              className="button primary"
+              disabled={
+                update.isPending ||
+                !refresh.data?.configured ||
+                ["queued", "running", "blocked"].includes(
+                  refresh.data?.refresh?.status ?? "",
+                )
+              }
+              onClick={() => update.mutate()}
+            >
+              <RefreshCw size={14} />
+              {update.isPending ? "Queueing…" : "Update all benchmarks"}
+            </button>
+          )}
+        </div>
+        {refresh.data && !refresh.data.configured && (
+          <p className="error-state">
+            Configure ZAI_API_KEY and restart Fener.
+          </p>
+        )}
+        {refresh.data?.refresh && (
+          <div className="stack" style={{ marginTop: 15 }}>
+            <progress
+              max={refresh.data.refresh.total_models}
+              value={refresh.data.refresh.processed_models}
+              style={{ width: "100%" }}
+            />
+            <p className="small">
+              {refresh.data.refresh.processed_models} /{" "}
+              {refresh.data.refresh.total_models} models ·{" "}
+              {refresh.data.refresh.imported_results} cited results ·{" "}
+              {refresh.data.refresh.failed_models} failed or uncertain · Status:{" "}
+              {refresh.data.refresh.status.replaceAll("_", " ")}
+              {refresh.data.refresh.current_model
+                ? ` · Researching ${refresh.data.refresh.current_model}`
+                : ""}
+            </p>
+            {refresh.data.refresh.error && (
+              <p className="error-state">{refresh.data.refresh.error}</p>
+            )}
+          </div>
+        )}
+        {update.error && (
+          <ErrorState error={update.error} retry={() => update.mutate()} />
+        )}
+      </section>
       <div className="info-callout">
         <Info size={18} />
         <div>
-          <strong>AI extraction is not verification</strong>Z.ai must cite an
-          approved source and provide an exact model, metric, score, version and
-          evaluator. Fener keeps these claims out of rankings and
+          <strong>AI extraction is not verification</strong>The update must cite
+          an approved source and provide an exact model, metric, score, version
+          and evaluator. Fener keeps these claims out of rankings and
           recommendations until a future human-review workflow exists.
         </div>
       </div>
@@ -71,7 +172,7 @@ export default function BenchmarksPage() {
         <ErrorState error={groups.error} retry={groups.refetch} />
       ) : !groups.data?.length ? (
         <Empty title="No benchmark evidence yet">
-          Run a manually approved benchmark investigation in AI research.
+          Press Update all benchmarks to research every resolved catalog model.
           Catalog source syncs never fill this page.
         </Empty>
       ) : (
@@ -127,11 +228,11 @@ export default function BenchmarksPage() {
                       {selected.models} models
                     </p>
                   </div>
-                  <Badge tone="warning">AI-extracted · unverified</Badge>
+                  <Badge tone="warning">AI-researched · unverified</Badge>
                 </div>
                 <p className="benchmark-note">
-                  Alphabetical, not a leaderboard. Only cited Z.ai extractions
-                  are shown. Open the original report before relying on a score.
+                  Alphabetical, not a leaderboard. Only cited AI research is
+                  shown. Open the original report before relying on a score.
                 </p>
                 {query.isPending ? (
                   <Loading />
@@ -204,10 +305,12 @@ export default function BenchmarksPage() {
                                   ? `Reported ${date(row.reported_date)}`
                                   : "Report date unknown"}
                               </small>
-                              <SourceLink
-                                source={`Via ${row.source}`}
-                                url={row.source_url}
-                              />
+                              {row.source_url !== row.report_url && (
+                                <SourceLink
+                                  source={`Via ${row.source}`}
+                                  url={row.source_url}
+                                />
+                              )}
                             </td>
                           </tr>
                         ))}

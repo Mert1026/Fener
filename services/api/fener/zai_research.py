@@ -192,7 +192,7 @@ def fetch_zai_research(request: dict[str, Any], key: str) -> dict[str, Any]:
             ],
             "stream": False,
             "thinking": {"type": "disabled"},
-            "max_tokens": 8000,
+            "max_tokens": request.get("max_output_tokens", 8000),
             "response_format": {"type": "json_object"},
         },
         key,
