@@ -28,6 +28,28 @@ def test_litellm_no_context_conflation():
     assert row.prices[0].normalized == Decimal("2.5")
 
 
+def test_litellm_resolves_direct_openai_identity_only():
+    direct = litellm.normalize(
+        {
+            "gpt-6-astra": {
+                "litellm_provider": "openai",
+                "mode": "chat",
+                "max_input_tokens": 922000,
+                "max_output_tokens": 128000,
+            },
+            "azure/gpt-6-astra": {
+                "litellm_provider": "azure",
+                "mode": "chat",
+            },
+        }
+    )
+    assert direct[0].canonical is True
+    assert direct[0].canonical_id == "openai/gpt-6-astra"
+    assert direct[0].publisher_id == "openai"
+    assert direct[1].canonical is False
+    assert direct[1].publisher_id is None
+
+
 def test_missing_optional_data_is_unknown_and_extensions_are_allowed():
     rows = models_dev.normalize(
         {

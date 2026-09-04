@@ -1,4 +1,11 @@
-# Validation record — 2026-09-01
+# Validation record — 2026-09-04
+
+## Fresh OpenAI model discovery — 2026-09-04
+
+- Confirmed GPT-6 Astra against OpenAI's announcement and API model documentation. The current LiteLLM feed already contained its exact direct OpenAI API ID and pricing, but Fener had isolated it as an unresolved candidate and therefore hid it from the default catalog and benchmark queue.
+- Direct first-party OpenAI entries now resolve the exact `openai/<api-model-id>` identity while retaining LiteLLM's aggregated evidence label and authority. Existing candidates are promoted in place, preserving their IDs, aliases, deployments, prices and evidence history. Exact searches also include unresolved discoveries so a new source row remains findable before identity resolution.
+- Replayed the current public LiteLLM snapshot: `gpt-6-astra` is resolved under publisher `openai`, with one direct deployment and last-confirmed $10 input / $50 output prices per million tokens. Browser QA confirmed the Models page returns the row with unresolved identities disabled. No Z.ai call was made.
+- Ruff, formatting, strict mypy and all 77 backend tests passed with PostgreSQL integration enabled. The only warning is the existing upstream Starlette/httpx test-client deprecation.
 
 ## Catalog-wide AI benchmark refresh and larger manual output
 

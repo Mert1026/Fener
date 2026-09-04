@@ -19,6 +19,7 @@ OpenRouter and LLM Stats were removed from the registry, network allowlist, CLI 
 - models.dev benchmark fields are retained only inside raw historical snapshots and are not normalized into benchmark tables. The benchmark API accepts only cited Z.ai research extractions.
 - Missing records do not imply deprecation. Only explicit availability claims change availability. Each source record has its own last-seen timestamp.
 - Known canonical IDs and exact deployment identifiers resolve identities. Ambiguous aliases remain source-qualified candidates. No fuzzy merge occurs.
+- A direct LiteLLM entry in OpenAI's own provider namespace uses the exact API model ID as `openai/<api-model-id>`. This resolves the identity while its prices and capabilities remain labeled as aggregated LiteLLM evidence.
 
 ## Failure behavior
 

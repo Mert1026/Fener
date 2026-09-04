@@ -150,7 +150,9 @@ def list_models(
     limit: int = 50,
 ) -> ModelPage:
     query = select(Model)
-    if not include_unresolved:
+    # Exact searches should find fresh source discoveries immediately. Their
+    # unresolved status remains visible and broad browsing stays canonical-only.
+    if not include_unresolved and not q.strip():
         query = query.where(Model.identity_status == "resolved")
     if q:
         escaped = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")

@@ -195,6 +195,31 @@ def test_decimal_formatting_does_not_create_price_facts_events_or_conflicts(sess
     )
 
 
+def test_exact_identity_evidence_promotes_existing_candidate_in_place(session):
+    setup_source(session, "litellm")
+    candidate = row("1")
+    candidate.publisher_id = None
+    CatalogWriter(session, "litellm", datetime(2026, 1, 1, tzinfo=UTC)).persist(
+        candidate, "litellm", "https://example.test/catalog.json"
+    )
+    session.commit()
+    original = session.scalar(select(Model))
+    original_id = original.id
+
+    resolved = row("1", canonical=True)
+    CatalogWriter(session, "litellm", datetime(2026, 1, 2, tzinfo=UTC)).persist(
+        resolved, "litellm", "https://example.test/catalog.json"
+    )
+    session.commit()
+
+    promoted = session.get(Model, original_id)
+    assert promoted is not None
+    assert promoted.identity_key == "canonical:test/model"
+    assert promoted.identity_status == "resolved"
+    assert promoted.publisher_id == "test"
+    assert session.scalar(select(func.count()).select_from(Model)) == 1
+
+
 def test_market_hides_legacy_formatting_events_before_pagination(client):
     with Session(client.test_engine) as session:
         setup_source(session)
