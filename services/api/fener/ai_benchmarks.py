@@ -1,4 +1,4 @@
-"""Persist only cited Z.ai benchmark candidates, isolated from source-ingested facts."""
+"""Persist reviewed-shape benchmark candidates, isolated from catalog source facts."""
 
 from decimal import Decimal
 from typing import Any
@@ -16,16 +16,28 @@ def persist_research_benchmarks(
     *,
     research_run_id: str | None = None,
     refresh_item_id: str | None = None,
+    target_model_id: str | None = None,
 ) -> dict[str, Any]:
     if (research_run_id is None) == (refresh_item_id is None):
         raise ValueError("Exactly one benchmark research origin is required")
+    if target_model_id is not None and refresh_item_id is None:
+        raise ValueError("A target model ID is allowed only for a catalog refresh item")
     by_name: dict[str, list[Model]] = {}
     for model in session.scalars(select(Model)):
         by_name.setdefault(model.name.casefold().strip(), []).append(model)
 
     imported, skipped = 0, []
     for index, candidate in enumerate(candidates):
-        matches = by_name.get(candidate["model_name"].casefold().strip(), [])
+        target = session.get(Model, target_model_id) if target_model_id else None
+        if target_model_id:
+            matches = (
+                [target]
+                if target is not None
+                and target.name.casefold().strip() == candidate["model_name"].casefold().strip()
+                else []
+            )
+        else:
+            matches = by_name.get(candidate["model_name"].casefold().strip(), [])
         if len(matches) != 1:
             skipped.append(
                 {

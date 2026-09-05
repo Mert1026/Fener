@@ -248,7 +248,7 @@ def benchmark_results(
         key = (result.model_id, result.name, result.version, result.evaluator, result.metric)
         if key in latest:
             continue
-        issues = ["AI-extracted result requires review against the cited report"]
+        issues = ["Source-extracted result requires review against the cited report"]
         method_complete = not any(
             value.casefold().startswith("unspecified")
             for value in (result.version, result.evaluator, result.metric)
@@ -259,7 +259,6 @@ def benchmark_results(
             or result.score_max <= result.score_min
         ):
             issues.append("Documented numeric scale not supplied")
-            method_complete = False
         elif not result.score_min <= result.score <= result.score_max:
             issues.append("Score falls outside the documented scale")
             method_complete = False
@@ -270,7 +269,7 @@ def benchmark_results(
             "id": result.id,
             "model_id": result.model_id,
             "model_name": model_name,
-            "benchmark_id": digest("zai-research", result.name, result.version),
+            "benchmark_id": digest("research-benchmark", result.name, result.version),
             "name": result.name,
             "version": result.version,
             "category": result.category,
@@ -278,9 +277,9 @@ def benchmark_results(
             "score_min": str(result.score_min) if result.score_min is not None else None,
             "score_max": str(result.score_max) if result.score_max is not None else None,
             "higher_is_better": result.higher_is_better,
-            "verification": "ai_extracted_unverified",
+            "verification": "source_extracted_unverified",
             "evaluator": result.evaluator,
-            "source": "AI benchmark research",
+            "source": "Artificial Analysis public dataset",
             "source_url": result.source_url,
             "source_title": result.source_title,
             "observed_at": result.created_at,

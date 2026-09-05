@@ -101,18 +101,17 @@ export default function BenchmarksPage() {
       <PageHeader
         eyebrow="Benchmark intelligence"
         title="Comparable model benchmarks."
-        description="Z.ai checks every resolved model against the same Artificial Analysis Intelligence Index. Only source-cited model scores enter a comparable cohort."
+        description="Fener reads the current Artificial Analysis Intelligence Index cohort directly. Only exact source-published model scores enter the comparison."
       />
       <section className="panel settings-panel" style={{ marginBottom: 20 }}>
         <div className="panel-header">
           <div>
             <h2>Catalog-wide benchmark update</h2>
             <p>
-              One click checks every resolved model against Artificial Analysis
-              model benchmarks. Models Artificial Analysis has not measured stay
-              marked as no evidence. Each model can use one web search and one
-              summary request, so a full update may take hours and incur
-              substantial API charges.
+              One click reads Artificial Analysis&apos;s current public model
+              dataset once and matches it against every resolved catalog model.
+              Models outside that exact index version stay marked as no
+              evidence. This benchmark update does not spend Z.ai tokens.
             </p>
           </div>
           {isPrivateLocked(refresh.error) ? (
@@ -132,15 +131,14 @@ export default function BenchmarksPage() {
               onClick={() => update.mutate()}
             >
               <RefreshCw size={14} />
-              {update.isPending ? "Queueing…" : "Update all benchmarks"}
+              {update.isPending
+                ? "Queueing…"
+                : refresh.data?.refresh?.status === "paused"
+                  ? "Resume benchmarks"
+                  : "Update all benchmarks"}
             </button>
           )}
         </div>
-        {refresh.data && !refresh.data.configured && (
-          <p className="error-state">
-            Configure ZAI_API_KEY and restart Fener.
-          </p>
-        )}
         {refresh.data?.refresh && (
           <div className="stack" style={{ marginTop: 15 }}>
             <progress
@@ -195,12 +193,11 @@ export default function BenchmarksPage() {
       <div className="info-callout">
         <Info size={18} />
         <div>
-          <strong>AI extraction is not verification</strong>The update must cite
-          an Artificial Analysis source and provide an exact model, metric,
-          score, version and evaluator. Coding-agent results are kept separate
-          because their harness and execution settings materially affect the
-          score. AI-extracted claims remain unverified and stay out of
-          recommendations.
+          <strong>Direct source data still requires review</strong>Fener accepts
+          one exact Artificial Analysis index version, evaluator and metric.
+          Coding-agent results stay separate because their harness and execution
+          settings materially affect the score. Source-linked claims remain out
+          of recommendations pending a review workflow.
         </div>
       </div>
       {groups.isPending ? (
@@ -216,8 +213,8 @@ export default function BenchmarksPage() {
           }
         >
           {finishedWithoutResults
-            ? "Nothing is hidden: no result passed the citation and completeness checks. Review the run diagnostics above before starting another paid update."
-            : "Press Update all benchmarks to research every resolved catalog model. Catalog source syncs never fill this page."}
+            ? "Nothing is hidden: no result passed the source and identity checks. Review the run diagnostics above before trying the direct source again."
+            : "Press Update all benchmarks to compare every resolved catalog model with the current Artificial Analysis cohort."}
         </Empty>
       ) : (
         <div className="benchmark-layout">
@@ -275,11 +272,12 @@ export default function BenchmarksPage() {
                       {selected.models} models
                     </p>
                   </div>
-                  <Badge tone="warning">AI-researched · unverified</Badge>
+                  <Badge tone="warning">Source-extracted · unverified</Badge>
                 </div>
                 <p className="benchmark-note">
-                  Alphabetical, not a leaderboard. Only cited AI research is
-                  shown. Open the original report before relying on a score.
+                  Alphabetical, not a leaderboard. Only the current comparable
+                  source cohort is shown. Open the original report before
+                  relying on a score.
                 </p>
                 {query.isPending ? (
                   <Loading />

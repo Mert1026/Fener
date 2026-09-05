@@ -2,10 +2,12 @@
 
 ## Artificial Analysis comparable benchmark research
 
-- The catalog-wide Z.ai query is now domain-filtered to `artificialanalysis.ai` and accepts only the model-level Artificial Analysis Intelligence Index with its published version, evaluator and `index points` metric. Coding Agent Index claims are explicitly excluded because agent harness, tool and execution configuration affect those results.
+- A live diagnostic proved Z.ai's search backend ignored its Artificial Analysis domain filter and returned another approved domain. The active 431-model refresh was paused at 60 processed models to stop wasting requests; it had zero imports, 46 failures and 14 no-evidence items. No items or history were deleted.
+- The benchmark worker now reads the structured current cohort embedded in Artificial Analysis's public models page with one bounded GET and no Z.ai requests. It accepts only the model-level Artificial Analysis Intelligence Index with its published version, evaluator and `index points` metric. Coding Agent Index claims are excluded because agent harness, tool and execution configuration affect those results.
 - Benchmark groups now use exact benchmark name, version, evaluator and metric. This prevents different index versions or evaluators from appearing in one comparison. The original Artificial Analysis page title is returned and displayed so the tested model or reasoning-effort variant remains inspectable.
-- Every resolved catalog model is checked when the user starts an update. Models without a complete cited Artificial Analysis result receive `no_evidence`; Fener does not create a score merely to fill the catalog. No paid update was started during implementation.
-- Ruff, formatting, strict mypy and all 82 backend tests passed with PostgreSQL integration enabled. TypeScript, ESLint, all 15 frontend tests and the production Next.js build passed.
+- Every resolved catalog model is checked when the user starts an update. Only unique catalog/source identity matches in the single current index version are imported; unscored, ambiguous or absent models receive `no_evidence`. Fener does not create a score merely to fill the catalog.
+- Reprocessed the paused live queue from the captured current source response: 431/431 models completed, 20 v4.2 scores were imported, 411 models were marked `no_evidence`, and zero remained failed or uncertain. The resulting API exposes one 20-model cohort with the same version, evaluator, metric and direction.
+- Ruff, formatting, strict mypy and all 90 backend tests passed with PostgreSQL integration enabled. TypeScript, ESLint, all 16 frontend tests and the production Next.js build passed.
 
 ## Empty benchmark refresh diagnosis
 

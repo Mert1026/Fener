@@ -1,38 +1,56 @@
-"""Process one durable, non-retried benchmark-research item per worker pass."""
+"""Refresh one comparable benchmark cohort from Artificial Analysis."""
 
-from datetime import timedelta
-from urllib.parse import urlsplit
+import re
+from collections import defaultdict
 
 import httpx
 from fener.ai_benchmarks import persist_research_benchmarks
+from fener.artificial_analysis import IntelligenceIndexResult, fetch_current_intelligence_index
 from fener.config import Settings
 from fener.db import utcnow
 from fener.models import Model
 from fener.private_models import BenchmarkRefresh, BenchmarkRefreshItem
-from fener.zai_research import fetch_zai_research
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 PRIMARY_BENCHMARK = "Artificial Analysis Intelligence Index"
 PRIMARY_BENCHMARK_METRIC = "index points"
 PRIMARY_EVALUATOR = "Artificial Analysis"
-PRIMARY_SOURCE_DOMAIN = "artificialanalysis.ai"
+DATED_MODEL_SUFFIX = re.compile(r"[-_]20\d{2}[-_]\d{2}[-_]\d{2}$")
 
 
-def primary_benchmark_candidate(candidate: dict[str, object]) -> bool:
-    try:
-        host = (urlsplit(str(candidate["source_url"])).hostname or "").lower()
-        return (
-            (host == PRIMARY_SOURCE_DOMAIN or host.endswith("." + PRIMARY_SOURCE_DOMAIN))
-            and str(candidate["name"]).casefold().strip() == PRIMARY_BENCHMARK.casefold()
-            and str(candidate["metric"]).casefold().strip() == PRIMARY_BENCHMARK_METRIC.casefold()
-            and str(candidate["evaluator"]).casefold().strip() == PRIMARY_EVALUATOR.casefold()
-        )
-    except (KeyError, TypeError, ValueError):
-        return False
+def comparable_name(value: str) -> str:
+    value = DATED_MODEL_SUFFIX.sub("", value.casefold().strip())
+    return re.sub(r"[^a-z0-9]+", "", value)
 
 
-def process_benchmark_refresh(session: Session, config: Settings) -> int:
+def match_current_result(
+    model_name: str, rows: list[IntelligenceIndexResult]
+) -> IntelligenceIndexResult | None:
+    key = comparable_name(model_name)
+    matches = {row for row in rows if key in {comparable_name(row.slug), comparable_name(row.name)}}
+    return next(iter(matches)) if len(matches) == 1 else None
+
+
+def benchmark_candidate(model: Model, row: IntelligenceIndexResult) -> dict[str, object]:
+    return {
+        "model_name": model.name,
+        "name": PRIMARY_BENCHMARK,
+        "version": row.version,
+        "category": "general intelligence",
+        "metric": PRIMARY_BENCHMARK_METRIC,
+        "score": str(row.score),
+        "evaluator": PRIMARY_EVALUATOR,
+        "source_url": row.source_url,
+        "source_title": row.source_title,
+        "reported_date": None,
+        "higher_is_better": True,
+        "score_min": None,
+        "score_max": None,
+    }
+
+
+def process_benchmark_refresh(session: Session, _config: Settings) -> int:
     job = session.scalar(
         select(BenchmarkRefresh)
         .where(BenchmarkRefresh.status.in_(["queued", "running", "blocked"]))
@@ -43,114 +61,83 @@ def process_benchmark_refresh(session: Session, config: Settings) -> int:
     if job is None:
         return 0
 
-    # A provider call may have completed before a crash. Only mark old work as
-    # uncertain: a second worker can see a healthy request while it is in flight.
-    stale_before = utcnow() - timedelta(minutes=5)
-    for stale in session.scalars(
-        select(BenchmarkRefreshItem).where(
-            BenchmarkRefreshItem.refresh_id == job.id,
-            BenchmarkRefreshItem.status == "running",
-            BenchmarkRefreshItem.started_at < stale_before,
+    items = list(
+        session.scalars(
+            select(BenchmarkRefreshItem)
+            .where(
+                BenchmarkRefreshItem.refresh_id == job.id,
+                BenchmarkRefreshItem.status.in_(["queued", "running"]),
+            )
+            .order_by(BenchmarkRefreshItem.id)
+            .with_for_update(skip_locked=True)
         )
-    ):
-        stale.status = "uncertain"
-        stale.error = "The worker stopped during this model; no automatic retry was made."
-        stale.completed_at = utcnow()
-        job.processed_models += 1
-        job.failed_models += 1
-
-    # The job row lock and this check keep a catalog refresh sequential even if
-    # two worker processes are running.
-    running_item = session.scalar(
-        select(BenchmarkRefreshItem.id)
-        .where(
-            BenchmarkRefreshItem.refresh_id == job.id,
-            BenchmarkRefreshItem.status == "running",
-        )
-        .limit(1)
     )
-    if running_item:
-        session.commit()
-        return 0
-
-    key = config.zai_api_key.get_secret_value()
-    if not key:
-        job.status = "blocked"
-        job.error = "ZAI_API_KEY is no longer configured. Restart after restoring the key."
-        session.commit()
-        return 0
-
-    item = session.scalar(
-        select(BenchmarkRefreshItem)
-        .where(
-            BenchmarkRefreshItem.refresh_id == job.id,
-            BenchmarkRefreshItem.status == "queued",
-        )
-        .order_by(BenchmarkRefreshItem.id)
-        .with_for_update(skip_locked=True)
-        .limit(1)
-    )
-    if item is None:
+    if not items:
         job.status = "completed_with_errors" if job.failed_models else "completed"
         job.completed_at = utcnow()
         session.commit()
         return 0
-    model = session.get(Model, item.model_id)
-    if model is None:
-        item.status, item.error, item.completed_at = (
-            "failed",
-            "Catalog model no longer exists.",
-            utcnow(),
-        )
-        job.processed_models += 1
-        job.failed_models += 1
-        session.commit()
-        return 1
 
     job.status = "running"
     job.error = None
-    item.status = "running"
-    item.started_at = utcnow()
-    session.commit()
-    request = {
-        "model": job.model,
-        "query": (
-            f"Find the current model-level {PRIMARY_BENCHMARK} result for the exact AI model "
-            f"named {model.name!r}. Search only Artificial Analysis model benchmark pages. "
-            "Do not use the Coding Agent Index or assign an agent/harness score to a model. "
-            f"Return only {PRIMARY_BENCHMARK!r}, use metric {PRIMARY_BENCHMARK_METRIC!r} and "
-            f"evaluator {PRIMARY_EVALUATOR!r}, and preserve the published index version, numeric "
-            "score, report date, scale and source URL. Return no benchmark candidate unless the "
-            "source excerpt explicitly associates this exact model with the score."
-        ),
-        "search_domain_filter": PRIMARY_SOURCE_DOMAIN,
-        "max_output_tokens": 2000,
-    }
+    for item in items:
+        item.status = "running"
+        item.started_at = item.started_at or utcnow()
+    session.flush()
+
     try:
-        report = fetch_zai_research(request, key)
-        candidates = [
-            candidate
-            for candidate in report.get("benchmark_candidates", [])
-            if candidate["model_name"].casefold().strip() == model.name.casefold().strip()
-            and primary_benchmark_candidate(candidate)
-        ]
-        imported = persist_research_benchmarks(session, candidates, refresh_item_id=item.id)[
-            "imported"
-        ]
-        item.status = "success" if imported else "no_evidence"
-        if not imported:
-            item.error = "Research completed, but no complete cited benchmark claim was found."
-        item.imported_results = imported
-        job.imported_results += imported
-    except httpx.HTTPError:
-        item.status = "uncertain"
-        item.error = "Provider connection failed or timed out; no automatic retry was made."
-        job.failed_models += 1
-    except (ValueError, KeyError, TypeError, AttributeError, IndexError) as error:
-        item.status = "failed"
-        item.error = f"Research validation failed: {error}"
-        job.failed_models += 1
-    item.completed_at = utcnow()
-    job.processed_models += 1
+        current = fetch_current_intelligence_index()
+    except (httpx.HTTPError, ValueError):
+        for item in items:
+            item.status = "queued"
+            item.started_at = None
+        job.status = "paused"
+        job.error = (
+            "Artificial Analysis is unavailable or changed its public data format. "
+            "No benchmark data was changed; press Resume benchmarks to try again."
+        )
+        session.commit()
+        return 0
+
+    models = {
+        model.id: model
+        for model in session.scalars(select(Model).where(Model.id.in_([i.model_id for i in items])))
+    }
+    matches_by_slug: dict[str, list[str]] = defaultdict(list)
+    resolved: dict[str, IntelligenceIndexResult] = {}
+    for item in items:
+        model = models.get(item.model_id)
+        if model is None:
+            continue
+        match = match_current_result(model.name, current)
+        if match is not None:
+            matches_by_slug[match.slug].append(item.id)
+            resolved[item.id] = match
+
+    for item in items:
+        model, match = models.get(item.model_id), resolved.get(item.id)
+        if model is None:
+            item.status = "failed"
+            item.error = "Catalog model no longer exists."
+            job.failed_models += 1
+        elif match is None or match.score is None or len(matches_by_slug[match.slug]) != 1:
+            item.status = "no_evidence"
+            item.error = "No unique current Artificial Analysis Intelligence Index result."
+        else:
+            imported = persist_research_benchmarks(
+                session,
+                [benchmark_candidate(model, match)],
+                refresh_item_id=item.id,
+                target_model_id=model.id,
+            )["imported"]
+            item.status = "success" if imported else "no_evidence"
+            item.imported_results = imported
+            item.error = None if imported else "The current result could not be stored."
+            job.imported_results += imported
+        item.completed_at = utcnow()
+        job.processed_models += 1
+
+    job.status = "completed_with_errors" if job.failed_models else "completed"
+    job.completed_at = utcnow()
     session.commit()
     return 1

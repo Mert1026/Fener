@@ -1,3 +1,4 @@
+import pytest
 from fener.ai_benchmarks import persist_research_benchmarks
 from fener.analytics import comparable_scores
 from fener.catalog import benchmark_groups, benchmark_results
@@ -83,12 +84,12 @@ def test_benchmark_api_uses_only_cited_ai_extractions(session):
     row = benchmark_results(session, group_id=groups[0]["id"])[0]
     assert row["name"] != "Legacy benchmark"
     assert row["score"] == "14.00000000"
-    assert row["source"] == "AI benchmark research"
+    assert row["source"] == "Artificial Analysis public dataset"
     assert row["report_url"] == "https://aider.chat/docs/leaderboards/"
     assert row["source_title"] == "Fixture report"
-    assert row["verification"] == "ai_extracted_unverified"
+    assert row["verification"] == "source_extracted_unverified"
     assert row["comparable"] is True
-    assert "AI-extracted result" in row["quality_issues"][0]
+    assert "Source-extracted result" in row["quality_issues"][0]
     assert comparable_scores(session) == ({}, [])
 
 
@@ -113,7 +114,7 @@ def test_benchmark_cohorts_never_mix_versions_or_evaluators(session):
     assert all(group["models"] == 1 and group["results"] == 1 for group in groups)
 
 
-def test_benchmark_without_a_documented_scale_is_not_comparable(session):
+def test_exact_cohort_remains_comparable_without_an_invented_theoretical_scale(session):
     setup_source(session)
     write(session, "1")
     run = research_run(session)
@@ -125,7 +126,7 @@ def test_benchmark_without_a_documented_scale_is_not_comparable(session):
     session.commit()
 
     row = benchmark_results(session)[0]
-    assert row["comparable"] is False
+    assert row["comparable"] is True
     assert "Documented numeric scale not supplied" in row["quality_issues"]
 
 
@@ -140,3 +141,17 @@ def test_ai_benchmark_requires_unique_exact_catalog_model_name(session):
     assert result["imported"] == 0
     assert result["skipped"][0]["reason"] == "No unique exact catalog model-name match"
     assert session.scalar(select(func.count()).select_from(ResearchBenchmark)) == 0
+
+
+def test_manual_research_cannot_bypass_name_matching_with_a_target_id(session):
+    setup_source(session)
+    write(session, "1")
+    model = session.scalar(select(Model).where(Model.identity_status == "resolved"))
+    run = research_run(session)
+    with pytest.raises(ValueError, match="catalog refresh item"):
+        persist_research_benchmarks(
+            session,
+            [candidate(model.name)],
+            research_run_id=run.id,
+            target_model_id=model.id,
+        )

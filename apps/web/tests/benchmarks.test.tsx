@@ -54,7 +54,7 @@ it("queues one approved update for the whole catalog without a manual prompt", a
   });
   await waitFor(() => expect(button).toBeEnabled());
   expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
-  expect(screen.getByText(/may take hours/)).toBeInTheDocument();
+  expect(screen.getByText(/does not spend Z.ai tokens/)).toBeInTheDocument();
   fireEvent.click(button);
 
   await waitFor(() => {
@@ -114,4 +114,43 @@ it("explains a completed run that stored no benchmark results", async () => {
   ).toBeInTheDocument();
   expect(screen.getByText(/284 rejected by validation/)).toBeInTheDocument();
   expect(screen.getByText(/Nothing is hidden/)).toBeInTheDocument();
+});
+
+it("offers to resume a refresh paused by provider rate limits", async () => {
+  vi.mocked(api).mockImplementation(async (path) => {
+    if (path === "benchmark-refresh")
+      return {
+        configured: true,
+        model: "fixture-model",
+        refresh: {
+          id: "paused-refresh",
+          status: "paused",
+          total_models: 431,
+          processed_models: 60,
+          imported_results: 0,
+          failed_models: 46,
+          current_model: null,
+          error:
+            "Z.ai rate limit reached. Wait before pressing Resume benchmarks.",
+          item_status_counts: { failed: 46, no_evidence: 14, queued: 371 },
+          models_without_results: 14,
+          failure_reasons: [],
+        },
+      };
+    if (path === "benchmarks/groups") return [];
+    throw new Error(`Unexpected API path: ${path}`);
+  });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <BenchmarksPage />
+    </QueryClientProvider>,
+  );
+
+  expect(
+    await screen.findByRole("button", { name: "Resume benchmarks" }),
+  ).toBeEnabled();
+  expect(screen.getByText(/Z.ai rate limit reached/)).toBeInTheDocument();
 });

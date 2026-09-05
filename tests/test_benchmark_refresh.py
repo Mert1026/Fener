@@ -1,15 +1,12 @@
-from datetime import timedelta
+from decimal import Decimal
 from uuid import uuid4
 
-from fener.config import Settings, settings
-from fener.db import utcnow
-from fener.models import ResearchBenchmark
+from fener.artificial_analysis import IntelligenceIndexResult
+from fener.models import Model, ResearchBenchmark
 from fener.private_models import BenchmarkRefresh, BenchmarkRefreshItem
 from fener_worker import benchmark_jobs
-from pydantic import SecretStr
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
-from test_benchmark_evidence import candidate
 from test_ingestion import setup_source, write
 
 AUTH = {"Authorization": "Bearer test-admin-key"}
@@ -19,41 +16,45 @@ def start_body():
     return {"request_id": str(uuid4()), "acknowledge_cost": True}
 
 
-def primary_candidate():
-    return {
-        **candidate(),
-        "name": benchmark_jobs.PRIMARY_BENCHMARK,
-        "version": "v4.2",
-        "category": "general",
-        "metric": benchmark_jobs.PRIMARY_BENCHMARK_METRIC,
-        "evaluator": benchmark_jobs.PRIMARY_EVALUATOR,
-        "source_url": "https://artificialanalysis.ai/models/fixture-model",
-        "source_title": "Artificial Analysis model benchmarks",
-    }
+def current_result(*, slug="fixture-model", name="Fixture model (max)", score=Decimal("42.5")):
+    return IntelligenceIndexResult(
+        slug=slug,
+        name=name,
+        version="v4.2",
+        score=score,
+        estimated=False,
+    )
 
 
-def test_primary_benchmark_filter_rejects_incompatible_results():
-    row = primary_candidate()
-    assert benchmark_jobs.primary_benchmark_candidate(row)
-    for incompatible in (
-        {**row, "name": "Coding Agent Index"},
-        {**row, "version": "v4.2", "metric": "percent"},
-        {**row, "evaluator": "Another evaluator"},
-        {**row, "source_url": "https://example.com/copied-score"},
-    ):
-        assert not benchmark_jobs.primary_benchmark_candidate(incompatible)
-
-
-def test_update_button_api_requires_auth_key_and_catalog_models(client, monkeypatch):
+def test_update_button_requires_auth_and_catalog_models_but_not_an_api_key(client):
     assert client.post("/api/v1/benchmark-refresh", json=start_body()).status_code == 401
     client.headers.update(AUTH)
-    assert client.post("/api/v1/benchmark-refresh", json=start_body()).status_code == 503
-    monkeypatch.setattr(settings(), "zai_api_key", SecretStr("fixture-zai-never-live"))
     assert client.post("/api/v1/benchmark-refresh", json=start_body()).status_code == 409
+    with Session(client.test_engine) as session:
+        setup_source(session)
+        write(session, "1")
+        canonical = session.scalar(select(Model).where(Model.identity_status == "resolved"))
+        session.add(
+            Model(
+                id="duplicate-name",
+                identity_key="duplicate-name",
+                name=canonical.name,
+                family=None,
+                context_window=None,
+                open_weights=None,
+                release_date=None,
+                publisher_id=None,
+                identity_status="unresolved",
+            )
+        )
+        session.commit()
+    response = client.post("/api/v1/benchmark-refresh", json=start_body())
+    assert response.status_code == 202
+    assert response.json()["configured"] is True
+    assert response.json()["model"] == "Artificial Analysis public dataset"
 
 
-def test_full_catalog_refresh_is_durable_and_worker_imports_without_retry(client, monkeypatch):
-    monkeypatch.setattr(settings(), "zai_api_key", SecretStr("fixture-zai-never-live"))
+def test_catalog_refresh_reads_one_current_cohort_and_imports_matching_models(client, monkeypatch):
     client.headers.update(AUTH)
     with Session(client.test_engine) as session:
         setup_source(session)
@@ -66,169 +67,100 @@ def test_full_catalog_refresh_is_durable_and_worker_imports_without_retry(client
 
     calls = []
 
-    def fetch(request, key):
-        calls.append(request)
-        assert key == "fixture-zai-never-live"
-        assert request["max_output_tokens"] == 2000
-        assert request["search_domain_filter"] == "artificialanalysis.ai"
-        assert "Coding Agent Index" in request["query"]
-        return {"benchmark_candidates": [primary_candidate()]}
+    def fetch():
+        calls.append(True)
+        return [current_result()]
 
-    monkeypatch.setattr(benchmark_jobs, "fetch_zai_research", fetch)
+    monkeypatch.setattr(benchmark_jobs, "fetch_current_intelligence_index", fetch)
     with Session(client.test_engine) as session:
-        assert (
-            benchmark_jobs.process_benchmark_refresh(
-                session,
-                Settings(_env_file=None, zai_api_key="fixture-zai-never-live"),
-            )
-            == 1
-        )
-        assert (
-            benchmark_jobs.process_benchmark_refresh(
-                session,
-                Settings(_env_file=None, zai_api_key="fixture-zai-never-live"),
-            )
-            == 0
-        )
+        assert benchmark_jobs.process_benchmark_refresh(session, object()) == 1
+        assert benchmark_jobs.process_benchmark_refresh(session, object()) == 0
         job = session.scalar(select(BenchmarkRefresh))
         item = session.scalar(select(BenchmarkRefreshItem))
+        result = session.scalar(select(ResearchBenchmark))
         assert job.status == "completed" and job.processed_models == 1
         assert item.status == "success" and item.imported_results == 1
-        assert session.scalar(select(func.count()).select_from(ResearchBenchmark)) == 1
+        assert result.name == benchmark_jobs.PRIMARY_BENCHMARK
+        assert result.version == "v4.2"
+        assert result.score == Decimal("42.50000000")
+        assert result.source_url == "https://artificialanalysis.ai/models/fixture-model"
     assert len(calls) == 1
-    status = client.get("/api/v1/benchmark-refresh").json()["refresh"]
-    assert status["status"] == "completed" and status["imported_results"] == 1
 
 
-def test_completed_research_without_candidates_is_not_reported_as_success(client, monkeypatch):
-    monkeypatch.setattr(settings(), "zai_api_key", SecretStr("fixture-zai-never-live"))
+def test_unmatched_or_unscored_models_are_no_evidence_not_failures(client, monkeypatch):
     client.headers.update(AUTH)
     with Session(client.test_engine) as session:
         setup_source(session)
         write(session, "1")
     assert client.post("/api/v1/benchmark-refresh", json=start_body()).status_code == 202
     monkeypatch.setattr(
-        benchmark_jobs, "fetch_zai_research", lambda *_: {"benchmark_candidates": []}
+        benchmark_jobs,
+        "fetch_current_intelligence_index",
+        lambda: [current_result(slug="other-model", name="Other model", score=None)],
     )
 
     with Session(client.test_engine) as session:
-        assert (
-            benchmark_jobs.process_benchmark_refresh(
-                session,
-                Settings(_env_file=None, zai_api_key="fixture-zai-never-live"),
-            )
-            == 1
-        )
-        assert (
-            benchmark_jobs.process_benchmark_refresh(
-                session,
-                Settings(_env_file=None, zai_api_key="fixture-zai-never-live"),
-            )
-            == 0
-        )
+        assert benchmark_jobs.process_benchmark_refresh(session, object()) == 1
+        job = session.scalar(select(BenchmarkRefresh))
         item = session.scalar(select(BenchmarkRefreshItem))
         assert item.status == "no_evidence"
-        assert item.error == "Research completed, but no complete cited benchmark claim was found."
+        assert job.status == "completed" and job.failed_models == 0
+        assert session.scalar(select(func.count()).select_from(ResearchBenchmark)) == 0
 
-    view = client.get("/api/v1/benchmark-refresh").json()["refresh"]
-    assert view["item_status_counts"] == {"no_evidence": 1}
-    assert view["models_without_results"] == 1
-    assert view["failure_reasons"] == [
-        {
-            "message": "Research completed, but no complete cited benchmark claim was found.",
-            "count": 1,
-        }
+
+def test_source_failure_pauses_without_counting_models_and_resume_requeues_old_failures(
+    client, monkeypatch
+):
+    client.headers.update(AUTH)
+    with Session(client.test_engine) as session:
+        setup_source(session)
+        write(session, "1")
+    assert client.post("/api/v1/benchmark-refresh", json=start_body()).status_code == 202
+    monkeypatch.setattr(
+        benchmark_jobs,
+        "fetch_current_intelligence_index",
+        lambda: (_ for _ in ()).throw(ValueError("changed page")),
+    )
+
+    with Session(client.test_engine) as session:
+        assert benchmark_jobs.process_benchmark_refresh(session, object()) == 0
+        job = session.scalar(select(BenchmarkRefresh))
+        item = session.scalar(select(BenchmarkRefreshItem))
+        assert job.status == "paused" and job.processed_models == job.failed_models == 0
+        assert item.status == "queued" and item.started_at is None
+
+        # Reproduce a result from the search-based worker that this version replaces.
+        item.status = "failed"
+        item.error = (
+            "Research validation failed: Research provider returned HTTP 429. "
+            "Check credentials, general API access and account limits. No automatic retry was made."
+        )
+        item.imported_results = 0
+        job.processed_models = 1
+        job.failed_models = 1
+        session.commit()
+
+    resumed = client.post("/api/v1/benchmark-refresh", json=start_body())
+    assert resumed.status_code == 202
+    assert resumed.json()["refresh"]["status"] == "queued"
+    assert resumed.json()["refresh"]["processed_models"] == 0
+    assert resumed.json()["refresh"]["failed_models"] == 0
+    with Session(client.test_engine) as session:
+        item = session.scalar(select(BenchmarkRefreshItem))
+        assert item.status == "queued" and item.error is None
+
+
+def test_matching_normalizes_punctuation_and_dated_api_suffixes():
+    rows = [current_result(slug="o3-mini", name="o3-mini")]
+    assert benchmark_jobs.match_current_result("o3-mini-2025-01-31", rows) == rows[0]
+    assert benchmark_jobs.comparable_name("Gemini 3.5 Flash-Lite") == (
+        benchmark_jobs.comparable_name("Gemini 3.5 Flash Lite")
+    )
+
+
+def test_ambiguous_source_match_is_not_selected():
+    rows = [
+        current_result(slug="fixture-model", name="Fixture model (max)"),
+        current_result(slug="fixture-model-high", name="Fixture model"),
     ]
-
-
-def test_worker_does_not_duplicate_a_healthy_in_flight_request(client, monkeypatch):
-    monkeypatch.setattr(settings(), "zai_api_key", SecretStr("fixture-zai-never-live"))
-    client.headers.update(AUTH)
-    with Session(client.test_engine) as session:
-        setup_source(session)
-        write(session, "1")
-    assert client.post("/api/v1/benchmark-refresh", json=start_body()).status_code == 202
-    with Session(client.test_engine) as session:
-        job = session.scalar(select(BenchmarkRefresh))
-        item = session.scalar(select(BenchmarkRefreshItem))
-        job.status = "running"
-        item.status = "running"
-        item.started_at = utcnow()
-        session.commit()
-        assert (
-            benchmark_jobs.process_benchmark_refresh(
-                session,
-                Settings(_env_file=None, zai_api_key="fixture-zai-never-live"),
-            )
-            == 0
-        )
-        session.refresh(item)
-        assert item.status == "running"
-        assert job.processed_models == 0
-
-
-def test_worker_marks_abandoned_paid_request_uncertain_without_retry(client, monkeypatch):
-    monkeypatch.setattr(settings(), "zai_api_key", SecretStr("fixture-zai-never-live"))
-    client.headers.update(AUTH)
-    with Session(client.test_engine) as session:
-        setup_source(session)
-        write(session, "1")
-    assert client.post("/api/v1/benchmark-refresh", json=start_body()).status_code == 202
-    with Session(client.test_engine) as session:
-        job = session.scalar(select(BenchmarkRefresh))
-        item = session.scalar(select(BenchmarkRefreshItem))
-        job.status = "running"
-        item.status = "running"
-        item.started_at = utcnow() - timedelta(minutes=6)
-        session.commit()
-        monkeypatch.setattr(
-            benchmark_jobs,
-            "fetch_zai_research",
-            lambda *_: (_ for _ in ()).throw(AssertionError("must not retry")),
-        )
-        assert (
-            benchmark_jobs.process_benchmark_refresh(
-                session,
-                Settings(_env_file=None, zai_api_key="fixture-zai-never-live"),
-            )
-            == 0
-        )
-        session.refresh(job)
-        session.refresh(item)
-        assert item.status == "uncertain"
-        assert job.status == "completed_with_errors"
-        assert job.processed_models == job.failed_models == 1
-
-
-def test_blocked_refresh_resumes_after_key_is_restored(client, monkeypatch):
-    monkeypatch.setattr(settings(), "zai_api_key", SecretStr("fixture-zai-never-live"))
-    client.headers.update(AUTH)
-    with Session(client.test_engine) as session:
-        setup_source(session)
-        write(session, "1")
-    assert client.post("/api/v1/benchmark-refresh", json=start_body()).status_code == 202
-    with Session(client.test_engine) as session:
-        assert benchmark_jobs.process_benchmark_refresh(session, Settings(_env_file=None)) == 0
-        job = session.scalar(select(BenchmarkRefresh))
-        assert job.status == "blocked" and job.processed_models == 0
-        monkeypatch.setattr(
-            benchmark_jobs,
-            "fetch_zai_research",
-            lambda *_: {"benchmark_candidates": [primary_candidate()]},
-        )
-        assert (
-            benchmark_jobs.process_benchmark_refresh(
-                session,
-                Settings(_env_file=None, zai_api_key="fixture-zai-never-live"),
-            )
-            == 1
-        )
-        assert (
-            benchmark_jobs.process_benchmark_refresh(
-                session,
-                Settings(_env_file=None, zai_api_key="fixture-zai-never-live"),
-            )
-            == 0
-        )
-        session.refresh(job)
-        assert job.status == "completed" and job.error is None
+    assert benchmark_jobs.match_current_result("Fixture model", rows) is None

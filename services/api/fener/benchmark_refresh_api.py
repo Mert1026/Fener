@@ -8,7 +8,6 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from fener.api_schemas import StrictInput
-from fener.config import settings
 from fener.db import session_dependency
 from fener.models import Model
 from fener.private_models import BenchmarkRefresh, BenchmarkRefreshItem
@@ -20,11 +19,41 @@ router = APIRouter(
     dependencies=[Depends(require_admin)],
 )
 DB = Annotated[Session, Depends(session_dependency)]
+RECOVERABLE_FAILURE_PREFIXES = (
+    "Research validation failed: Search returned no usable excerpts",
+    "Research validation failed: Incomplete benchmark candidate",
+    "Research validation failed: Invalid benchmark number",
+    "Research validation failed: Research provider returned HTTP 429.",
+)
 
 
 class RefreshInput(StrictInput):
     request_id: UUID
     acknowledge_cost: Literal[True]
+
+
+def resume_refresh(session: Session, row: BenchmarkRefresh) -> None:
+    recovered = 0
+    for item in session.scalars(
+        select(BenchmarkRefreshItem).where(
+            BenchmarkRefreshItem.refresh_id == row.id,
+            BenchmarkRefreshItem.status.in_(["failed", "no_evidence"]),
+            BenchmarkRefreshItem.imported_results == 0,
+        )
+    ):
+        if item.status == "no_evidence" or any(
+            (item.error or "").startswith(prefix) for prefix in RECOVERABLE_FAILURE_PREFIXES
+        ):
+            item.status = "queued"
+            item.error = None
+            item.started_at = None
+            item.completed_at = None
+            recovered += 1
+    row.processed_models = max(0, row.processed_models - recovered)
+    row.failed_models = max(0, row.failed_models - recovered)
+    row.status = "queued"
+    row.error = None
+    session.commit()
 
 
 def refresh_view(session: Session, row: BenchmarkRefresh | None) -> dict[str, Any]:
@@ -76,8 +105,8 @@ def refresh_view(session: Session, row: BenchmarkRefresh | None) -> dict[str, An
             if message
         ]
     return {
-        "configured": bool(settings().zai_api_key.get_secret_value()),
-        "model": settings().fener_zai_research_model,
+        "configured": True,
+        "model": "Artificial Analysis public dataset",
         "refresh": (
             {
                 "id": row.id,
@@ -110,17 +139,18 @@ def get_refresh(session: DB) -> dict[str, Any]:
 def start_refresh(request: RefreshInput, session: DB) -> dict[str, Any]:
     existing = session.get(BenchmarkRefresh, str(request.request_id))
     if existing:
+        if existing.status == "paused":
+            resume_refresh(session, existing)
         return refresh_view(session, existing)
     active = session.scalar(
         select(BenchmarkRefresh).where(
-            BenchmarkRefresh.status.in_(["queued", "running", "blocked"])
+            BenchmarkRefresh.status.in_(["queued", "running", "blocked", "paused"])
         )
     )
     if active:
+        if active.status == "paused":
+            resume_refresh(session, active)
         return refresh_view(session, active)
-    config = settings()
-    if not config.zai_api_key.get_secret_value():
-        raise HTTPException(503, "Add ZAI_API_KEY and restart Fener before updating benchmarks")
     model_ids = list(
         session.scalars(
             select(Model.id)
@@ -133,7 +163,7 @@ def start_refresh(request: RefreshInput, session: DB) -> dict[str, Any]:
     row = BenchmarkRefresh(
         id=str(request.request_id),
         status="queued",
-        model=config.fener_zai_research_model,
+        model="Artificial Analysis public dataset",
         total_models=len(model_ids),
     )
     session.add(row)
