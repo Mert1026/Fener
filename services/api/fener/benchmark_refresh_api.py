@@ -4,7 +4,7 @@ from typing import Annotated, Any, Literal
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from fener.api_schemas import StrictInput
@@ -29,6 +29,9 @@ class RefreshInput(StrictInput):
 
 def refresh_view(session: Session, row: BenchmarkRefresh | None) -> dict[str, Any]:
     current = None
+    status_counts: dict[str, int] = {}
+    failure_reasons: list[dict[str, Any]] = []
+    models_without_results = 0
     if row:
         current = session.execute(
             select(Model.name)
@@ -39,6 +42,39 @@ def refresh_view(session: Session, row: BenchmarkRefresh | None) -> dict[str, An
             )
             .limit(1)
         ).scalar_one_or_none()
+        status_counts = {
+            status: count
+            for status, count in session.execute(
+                select(BenchmarkRefreshItem.status, func.count())
+                .where(BenchmarkRefreshItem.refresh_id == row.id)
+                .group_by(BenchmarkRefreshItem.status)
+            )
+        }
+        models_without_results = (
+            session.scalar(
+                select(func.count())
+                .select_from(BenchmarkRefreshItem)
+                .where(
+                    BenchmarkRefreshItem.refresh_id == row.id,
+                    BenchmarkRefreshItem.status.in_(["success", "no_evidence"]),
+                    BenchmarkRefreshItem.imported_results == 0,
+                )
+            )
+            or 0
+        )
+        failure_reasons = [
+            {"message": message, "count": count}
+            for message, count in session.execute(
+                select(BenchmarkRefreshItem.error, func.count())
+                .where(
+                    BenchmarkRefreshItem.refresh_id == row.id,
+                    BenchmarkRefreshItem.error.is_not(None),
+                )
+                .group_by(BenchmarkRefreshItem.error)
+                .order_by(func.count().desc(), BenchmarkRefreshItem.error)
+            )
+            if message
+        ]
     return {
         "configured": bool(settings().zai_api_key.get_secret_value()),
         "model": settings().fener_zai_research_model,
@@ -52,6 +88,9 @@ def refresh_view(session: Session, row: BenchmarkRefresh | None) -> dict[str, An
                 "failed_models": row.failed_models,
                 "current_model": current,
                 "error": row.error,
+                "item_status_counts": status_counts,
+                "models_without_results": models_without_results,
+                "failure_reasons": failure_reasons,
                 "created_at": row.created_at,
                 "completed_at": row.completed_at,
             }

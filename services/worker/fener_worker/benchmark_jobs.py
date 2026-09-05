@@ -113,16 +113,18 @@ def process_benchmark_refresh(session: Session, config: Settings) -> int:
         imported = persist_research_benchmarks(session, candidates, refresh_item_id=item.id)[
             "imported"
         ]
-        item.status = "success"
+        item.status = "success" if imported else "no_evidence"
+        if not imported:
+            item.error = "Research completed, but no complete cited benchmark claim was found."
         item.imported_results = imported
         job.imported_results += imported
     except httpx.HTTPError:
         item.status = "uncertain"
         item.error = "Provider connection failed or timed out; no automatic retry was made."
         job.failed_models += 1
-    except (ValueError, KeyError, TypeError, AttributeError, IndexError):
+    except (ValueError, KeyError, TypeError, AttributeError, IndexError) as error:
         item.status = "failed"
-        item.error = "No complete usable cited benchmark response was returned."
+        item.error = f"Research validation failed: {error}"
         job.failed_models += 1
     item.completed_at = utcnow()
     job.processed_models += 1

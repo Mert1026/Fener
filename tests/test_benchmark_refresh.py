@@ -73,6 +73,47 @@ def test_full_catalog_refresh_is_durable_and_worker_imports_without_retry(client
     assert status["status"] == "completed" and status["imported_results"] == 1
 
 
+def test_completed_research_without_candidates_is_not_reported_as_success(client, monkeypatch):
+    monkeypatch.setattr(settings(), "zai_api_key", SecretStr("fixture-zai-never-live"))
+    client.headers.update(AUTH)
+    with Session(client.test_engine) as session:
+        setup_source(session)
+        write(session, "1")
+    assert client.post("/api/v1/benchmark-refresh", json=start_body()).status_code == 202
+    monkeypatch.setattr(
+        benchmark_jobs, "fetch_zai_research", lambda *_: {"benchmark_candidates": []}
+    )
+
+    with Session(client.test_engine) as session:
+        assert (
+            benchmark_jobs.process_benchmark_refresh(
+                session,
+                Settings(_env_file=None, zai_api_key="fixture-zai-never-live"),
+            )
+            == 1
+        )
+        assert (
+            benchmark_jobs.process_benchmark_refresh(
+                session,
+                Settings(_env_file=None, zai_api_key="fixture-zai-never-live"),
+            )
+            == 0
+        )
+        item = session.scalar(select(BenchmarkRefreshItem))
+        assert item.status == "no_evidence"
+        assert item.error == "Research completed, but no complete cited benchmark claim was found."
+
+    view = client.get("/api/v1/benchmark-refresh").json()["refresh"]
+    assert view["item_status_counts"] == {"no_evidence": 1}
+    assert view["models_without_results"] == 1
+    assert view["failure_reasons"] == [
+        {
+            "message": "Research completed, but no complete cited benchmark claim was found.",
+            "count": 1,
+        }
+    ]
+
+
 def test_worker_does_not_duplicate_a_healthy_in_flight_request(client, monkeypatch):
     monkeypatch.setattr(settings(), "zai_api_key", SecretStr("fixture-zai-never-live"))
     client.headers.update(AUTH)

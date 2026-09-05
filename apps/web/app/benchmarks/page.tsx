@@ -36,6 +36,9 @@ type RefreshState = {
     failed_models: number;
     current_model: string | null;
     error: string | null;
+    item_status_counts?: Record<string, number>;
+    models_without_results?: number;
+    failure_reasons?: { message: string; count: number }[];
   };
 };
 export default function BenchmarksPage() {
@@ -87,6 +90,10 @@ export default function BenchmarksPage() {
       ),
     enabled: !!selected,
   });
+  const finishedWithoutResults =
+    refresh.data?.refresh?.processed_models ===
+      refresh.data?.refresh?.total_models &&
+    refresh.data?.refresh?.imported_results === 0;
   return (
     <>
       <PageHeader
@@ -148,6 +155,31 @@ export default function BenchmarksPage() {
                 ? ` · Researching ${refresh.data.refresh.current_model}`
                 : ""}
             </p>
+            {refresh.data.refresh.processed_models ===
+              refresh.data.refresh.total_models && (
+              <div className="small muted">
+                <p>
+                  {refresh.data.refresh.item_status_counts?.failed ?? 0}{" "}
+                  rejected by validation ·{" "}
+                  {refresh.data.refresh.item_status_counts?.uncertain ?? 0}{" "}
+                  timed out or interrupted ·{" "}
+                  {refresh.data.refresh.models_without_results ?? 0} completed
+                  with no usable claim
+                </p>
+                {!!refresh.data.refresh.failure_reasons?.length && (
+                  <details>
+                    <summary>Why models produced no results</summary>
+                    {(refresh.data.refresh.failure_reasons ?? []).map(
+                      (reason) => (
+                        <p key={reason.message}>
+                          {reason.count} models: {reason.message}
+                        </p>
+                      ),
+                    )}
+                  </details>
+                )}
+              </div>
+            )}
             {refresh.data.refresh.error && (
               <p className="error-state">{refresh.data.refresh.error}</p>
             )}
@@ -171,9 +203,16 @@ export default function BenchmarksPage() {
       ) : groups.error ? (
         <ErrorState error={groups.error} retry={groups.refetch} />
       ) : !groups.data?.length ? (
-        <Empty title="No benchmark evidence yet">
-          Press Update all benchmarks to research every resolved catalog model.
-          Catalog source syncs never fill this page.
+        <Empty
+          title={
+            finishedWithoutResults
+              ? "Update finished with no usable benchmark claims"
+              : "No benchmark evidence yet"
+          }
+        >
+          {finishedWithoutResults
+            ? "Nothing is hidden: no result passed the citation and completeness checks. Review the run diagnostics above before starting another paid update."
+            : "Press Update all benchmarks to research every resolved catalog model. Catalog source syncs never fill this page."}
         </Empty>
       ) : (
         <div className="benchmark-layout">

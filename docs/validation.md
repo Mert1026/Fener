@@ -1,4 +1,11 @@
-# Validation record — 2026-09-04
+# Validation record — 2026-09-05
+
+## Empty benchmark refresh diagnosis
+
+- Inspected the completed 363-model refresh directly: zero benchmark rows were stored; 284 items failed validation, 18 timed out or were interrupted, and 61 completed with no usable benchmark candidate. Of the validation failures, 276 ended in under ten seconds, consistent with rejection during search/evidence validation. The worker did not retain the 61 narrative summaries because the queue was designed to persist only accepted benchmark claims.
+- The benchmark page now states explicitly when a completed update produced no saved claims, shows per-status counts and grouped failure reasons, and warns against another paid update until the diagnostics have been reviewed. Nothing is presented as a hidden or successful benchmark result.
+- Future empty-but-valid research is labeled `no_evidence` instead of `success`. Future validation failures retain the specific safe validation reason rather than collapsing every failure into one generic message. Existing historical statuses and the zero-result run were not rewritten, and no provider call was made during diagnosis.
+- Ruff, formatting, strict mypy and all 78 backend tests passed with PostgreSQL integration enabled. TypeScript, ESLint and all 15 frontend tests passed.
 
 ## Fresh OpenAI model discovery — 2026-09-04
 

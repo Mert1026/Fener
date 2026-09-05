@@ -30,6 +30,9 @@ it("queues one approved update for the whole catalog without a manual prompt", a
           failed_models: 0,
           current_model: null,
           error: null,
+          item_status_counts: { queued: 363 },
+          models_without_results: 0,
+          failure_reasons: [],
         },
       };
     }
@@ -66,4 +69,49 @@ it("queues one approved update for the whole catalog without a manual prompt", a
   });
   await waitFor(() => expect(button).toBeDisabled());
   expect(screen.getByText(/0 \/ 363 models/)).toBeInTheDocument();
+});
+
+it("explains a completed run that stored no benchmark results", async () => {
+  vi.mocked(api).mockImplementation(async (path) => {
+    if (path === "benchmark-refresh")
+      return {
+        configured: true,
+        model: "fixture-model",
+        refresh: {
+          id: "finished-refresh",
+          status: "completed_with_errors",
+          total_models: 363,
+          processed_models: 363,
+          imported_results: 0,
+          failed_models: 302,
+          current_model: null,
+          error: null,
+          item_status_counts: { failed: 284, uncertain: 18, success: 61 },
+          models_without_results: 61,
+          failure_reasons: [
+            {
+              message:
+                "No complete usable cited benchmark response was returned.",
+              count: 284,
+            },
+          ],
+        },
+      };
+    if (path === "benchmarks/groups") return [];
+    throw new Error(`Unexpected API path: ${path}`);
+  });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <BenchmarksPage />
+    </QueryClientProvider>,
+  );
+
+  expect(
+    await screen.findByText("Update finished with no usable benchmark claims"),
+  ).toBeInTheDocument();
+  expect(screen.getByText(/284 rejected by validation/)).toBeInTheDocument();
+  expect(screen.getByText(/Nothing is hidden/)).toBeInTheDocument();
 });
