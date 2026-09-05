@@ -170,11 +170,12 @@ def parse_summary(payload: dict[str, Any], evidence: list[dict[str, Any]]) -> di
 
 
 def fetch_zai_research(request: dict[str, Any], key: str) -> dict[str, Any]:
-    search = post_json(
-        ZAI_SEARCH, {"search_engine": "search-prime", "search_query": request["query"]}, key
-    )
-    # search-prime does not document reliable domain filtering. Enforce our
-    # allowlist locally before any excerpt reaches the model or report.
+    search_request = {"search_engine": "search-prime", "search_query": request["query"]}
+    if request.get("search_domain_filter"):
+        search_request["search_domain_filter"] = request["search_domain_filter"]
+    search = post_json(ZAI_SEARCH, search_request, key)
+    # Enforce the local allowlist as well as any remote domain filter before an
+    # excerpt reaches the model or report.
     evidence = search_evidence(search)
     summary = post_json(
         ZAI_CHAT,

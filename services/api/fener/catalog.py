@@ -237,23 +237,35 @@ def benchmark_results(
     )
     latest = {}
     for result, model_name in rows:
-        result_group = digest(result.name.casefold().strip(), result.metric.casefold().strip())
+        result_group = digest(
+            result.name.casefold().strip(),
+            result.version.casefold().strip(),
+            result.evaluator.casefold().strip(),
+            result.metric.casefold().strip(),
+        )
         if group_id and result_group != group_id:
             continue
         key = (result.model_id, result.name, result.version, result.evaluator, result.metric)
         if key in latest:
             continue
         issues = ["AI-extracted result requires review against the cited report"]
+        method_complete = not any(
+            value.casefold().startswith("unspecified")
+            for value in (result.version, result.evaluator, result.metric)
+        )
         if (
             result.score_min is None
             or result.score_max is None
             or result.score_max <= result.score_min
         ):
             issues.append("Documented numeric scale not supplied")
+            method_complete = False
         elif not result.score_min <= result.score <= result.score_max:
             issues.append("Score falls outside the documented scale")
+            method_complete = False
         if result.higher_is_better is None:
             issues.append("Score direction not supplied")
+            method_complete = False
         latest[key] = {
             "id": result.id,
             "model_id": result.model_id,
@@ -270,13 +282,14 @@ def benchmark_results(
             "evaluator": result.evaluator,
             "source": "AI benchmark research",
             "source_url": result.source_url,
+            "source_title": result.source_title,
             "observed_at": result.created_at,
             "metric": result.metric,
             "group_id": result_group,
             "report_url": result.source_url,
             "reported_date": result.reported_date,
             "quality_issues": issues,
-            "comparable": False,
+            "comparable": method_complete,
         }
     return sorted(
         latest.values(), key=lambda r: (r["name"], r["metric"], r["model_name"], r["id"])
@@ -293,6 +306,8 @@ def benchmark_groups(session: Session) -> list[dict[str, Any]]:
         {
             "id": id,
             "name": rows[0]["name"],
+            "version": rows[0]["version"],
+            "evaluator": rows[0]["evaluator"],
             "metric": rows[0]["metric"],
             "results": len(rows),
             "models": len({r["model_id"] for r in rows}),

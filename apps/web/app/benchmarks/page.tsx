@@ -19,6 +19,8 @@ import {
 type Group = {
   id: string;
   name: string;
+  version: string;
+  evaluator: string;
   metric: string;
   results: number;
   models: number;
@@ -98,18 +100,19 @@ export default function BenchmarksPage() {
     <>
       <PageHeader
         eyebrow="Benchmark intelligence"
-        title="Research benchmarks for the whole catalog."
-        description="Update runs AI research across every resolved catalog model and adds complete cited benchmark claims. Every result stays unverified until you inspect its original report."
+        title="Comparable model benchmarks."
+        description="Z.ai checks every resolved model against the same Artificial Analysis Intelligence Index. Only source-cited model scores enter a comparable cohort."
       />
       <section className="panel settings-panel" style={{ marginBottom: 20 }}>
         <div className="panel-header">
           <div>
             <h2>Catalog-wide benchmark update</h2>
             <p>
-              One click queues every resolved model. Each model can use one web
-              search and one summary request, so a full update may take hours
-              and incur substantial API charges. Failed or interrupted items are
-              not retried automatically.
+              One click checks every resolved model against Artificial Analysis
+              model benchmarks. Models Artificial Analysis has not measured stay
+              marked as no evidence. Each model can use one web search and one
+              summary request, so a full update may take hours and incur
+              substantial API charges.
             </p>
           </div>
           {isPrivateLocked(refresh.error) ? (
@@ -193,9 +196,11 @@ export default function BenchmarksPage() {
         <Info size={18} />
         <div>
           <strong>AI extraction is not verification</strong>The update must cite
-          an approved source and provide an exact model, metric, score, version
-          and evaluator. Fener keeps these claims out of rankings and
-          recommendations until a future human-review workflow exists.
+          an Artificial Analysis source and provide an exact model, metric,
+          score, version and evaluator. Coding-agent results are kept separate
+          because their harness and execution settings materially affect the
+          score. AI-extracted claims remain unverified and stay out of
+          recommendations.
         </div>
       </div>
       {groups.isPending ? (
@@ -245,7 +250,9 @@ export default function BenchmarksPage() {
                   }}
                 >
                   <strong>{group.name}</strong>
-                  <span>{group.metric}</span>
+                  <span>
+                    {group.version} · {group.metric}
+                  </span>
                   <small>
                     {group.models} models · {group.results} results
                   </small>
@@ -264,6 +271,7 @@ export default function BenchmarksPage() {
                     <p>
                       Reported metric:{" "}
                       <strong className="accent">{selected.metric}</strong> ·{" "}
+                      {selected.version} · {selected.evaluator} ·{" "}
                       {selected.models} models
                     </p>
                   </div>
@@ -307,8 +315,8 @@ export default function BenchmarksPage() {
                             <td>
                               <Badge tone={row.comparable ? "good" : "warning"}>
                                 {row.comparable
-                                  ? "Comparable evidence"
-                                  : "Needs verification"}
+                                  ? "Same benchmark cohort"
+                                  : "Methodology incomplete"}
                               </Badge>
                               <details className="benchmark-issues">
                                 <summary>
@@ -326,6 +334,7 @@ export default function BenchmarksPage() {
                                     : row.version}
                                 </p>
                                 <p>Evaluator: {row.evaluator}</p>
+                                <p>Tested source variant: {row.source_title}</p>
                               </details>
                             </td>
                             <td>

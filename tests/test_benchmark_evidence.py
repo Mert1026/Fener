@@ -78,15 +78,55 @@ def test_benchmark_api_uses_only_cited_ai_extractions(session):
     assert result == {"imported": 1, "skipped": []}
     groups = benchmark_groups(session)
     assert groups[0]["metric"] == "win rate" and groups[0]["results"] == 1
+    assert groups[0]["version"] == "2026-01"
+    assert groups[0]["evaluator"] == "Fixture protocol"
     row = benchmark_results(session, group_id=groups[0]["id"])[0]
     assert row["name"] != "Legacy benchmark"
     assert row["score"] == "14.00000000"
     assert row["source"] == "AI benchmark research"
     assert row["report_url"] == "https://aider.chat/docs/leaderboards/"
+    assert row["source_title"] == "Fixture report"
     assert row["verification"] == "ai_extracted_unverified"
-    assert row["comparable"] is False
+    assert row["comparable"] is True
     assert "AI-extracted result" in row["quality_issues"][0]
     assert comparable_scores(session) == ({}, [])
+
+
+def test_benchmark_cohorts_never_mix_versions_or_evaluators(session):
+    setup_source(session)
+    write(session, "1")
+    run = research_run(session)
+    persist_research_benchmarks(
+        session,
+        [
+            candidate(),
+            {**candidate(), "version": "2026-02"},
+            {**candidate(), "evaluator": "Different protocol"},
+        ],
+        research_run_id=run.id,
+    )
+    session.commit()
+
+    groups = benchmark_groups(session)
+    assert len(groups) == 3
+    assert len({group["id"] for group in groups}) == 3
+    assert all(group["models"] == 1 and group["results"] == 1 for group in groups)
+
+
+def test_benchmark_without_a_documented_scale_is_not_comparable(session):
+    setup_source(session)
+    write(session, "1")
+    run = research_run(session)
+    persist_research_benchmarks(
+        session,
+        [{**candidate(), "score_min": None, "score_max": None}],
+        research_run_id=run.id,
+    )
+    session.commit()
+
+    row = benchmark_results(session)[0]
+    assert row["comparable"] is False
+    assert "Documented numeric scale not supplied" in row["quality_issues"]
 
 
 def test_ai_benchmark_requires_unique_exact_catalog_model_name(session):

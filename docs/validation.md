@@ -1,5 +1,12 @@
 # Validation record — 2026-09-05
 
+## Artificial Analysis comparable benchmark research
+
+- The catalog-wide Z.ai query is now domain-filtered to `artificialanalysis.ai` and accepts only the model-level Artificial Analysis Intelligence Index with its published version, evaluator and `index points` metric. Coding Agent Index claims are explicitly excluded because agent harness, tool and execution configuration affect those results.
+- Benchmark groups now use exact benchmark name, version, evaluator and metric. This prevents different index versions or evaluators from appearing in one comparison. The original Artificial Analysis page title is returned and displayed so the tested model or reasoning-effort variant remains inspectable.
+- Every resolved catalog model is checked when the user starts an update. Models without a complete cited Artificial Analysis result receive `no_evidence`; Fener does not create a score merely to fill the catalog. No paid update was started during implementation.
+- Ruff, formatting, strict mypy and all 82 backend tests passed with PostgreSQL integration enabled. TypeScript, ESLint, all 15 frontend tests and the production Next.js build passed.
+
 ## Empty benchmark refresh diagnosis
 
 - Inspected the completed 363-model refresh directly: zero benchmark rows were stored; 284 items failed validation, 18 timed out or were interrupted, and 61 completed with no usable benchmark candidate. Of the validation failures, 276 ended in under ten seconds, consistent with rejection during search/evidence validation. The worker did not retain the 61 narrative summaries because the queue was designed to persist only accepted benchmark claims.

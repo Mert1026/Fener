@@ -19,6 +19,31 @@ def start_body():
     return {"request_id": str(uuid4()), "acknowledge_cost": True}
 
 
+def primary_candidate():
+    return {
+        **candidate(),
+        "name": benchmark_jobs.PRIMARY_BENCHMARK,
+        "version": "v4.2",
+        "category": "general",
+        "metric": benchmark_jobs.PRIMARY_BENCHMARK_METRIC,
+        "evaluator": benchmark_jobs.PRIMARY_EVALUATOR,
+        "source_url": "https://artificialanalysis.ai/models/fixture-model",
+        "source_title": "Artificial Analysis model benchmarks",
+    }
+
+
+def test_primary_benchmark_filter_rejects_incompatible_results():
+    row = primary_candidate()
+    assert benchmark_jobs.primary_benchmark_candidate(row)
+    for incompatible in (
+        {**row, "name": "Coding Agent Index"},
+        {**row, "version": "v4.2", "metric": "percent"},
+        {**row, "evaluator": "Another evaluator"},
+        {**row, "source_url": "https://example.com/copied-score"},
+    ):
+        assert not benchmark_jobs.primary_benchmark_candidate(incompatible)
+
+
 def test_update_button_api_requires_auth_key_and_catalog_models(client, monkeypatch):
     assert client.post("/api/v1/benchmark-refresh", json=start_body()).status_code == 401
     client.headers.update(AUTH)
@@ -45,7 +70,9 @@ def test_full_catalog_refresh_is_durable_and_worker_imports_without_retry(client
         calls.append(request)
         assert key == "fixture-zai-never-live"
         assert request["max_output_tokens"] == 2000
-        return {"benchmark_candidates": [candidate()]}
+        assert request["search_domain_filter"] == "artificialanalysis.ai"
+        assert "Coding Agent Index" in request["query"]
+        return {"benchmark_candidates": [primary_candidate()]}
 
     monkeypatch.setattr(benchmark_jobs, "fetch_zai_research", fetch)
     with Session(client.test_engine) as session:
@@ -187,7 +214,7 @@ def test_blocked_refresh_resumes_after_key_is_restored(client, monkeypatch):
         monkeypatch.setattr(
             benchmark_jobs,
             "fetch_zai_research",
-            lambda *_: {"benchmark_candidates": [candidate()]},
+            lambda *_: {"benchmark_candidates": [primary_candidate()]},
         )
         assert (
             benchmark_jobs.process_benchmark_refresh(

@@ -1,6 +1,7 @@
 """Process one durable, non-retried benchmark-research item per worker pass."""
 
 from datetime import timedelta
+from urllib.parse import urlsplit
 
 import httpx
 from fener.ai_benchmarks import persist_research_benchmarks
@@ -11,6 +12,24 @@ from fener.private_models import BenchmarkRefresh, BenchmarkRefreshItem
 from fener.zai_research import fetch_zai_research
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+
+PRIMARY_BENCHMARK = "Artificial Analysis Intelligence Index"
+PRIMARY_BENCHMARK_METRIC = "index points"
+PRIMARY_EVALUATOR = "Artificial Analysis"
+PRIMARY_SOURCE_DOMAIN = "artificialanalysis.ai"
+
+
+def primary_benchmark_candidate(candidate: dict[str, object]) -> bool:
+    try:
+        host = (urlsplit(str(candidate["source_url"])).hostname or "").lower()
+        return (
+            (host == PRIMARY_SOURCE_DOMAIN or host.endswith("." + PRIMARY_SOURCE_DOMAIN))
+            and str(candidate["name"]).casefold().strip() == PRIMARY_BENCHMARK.casefold()
+            and str(candidate["metric"]).casefold().strip() == PRIMARY_BENCHMARK_METRIC.casefold()
+            and str(candidate["evaluator"]).casefold().strip() == PRIMARY_EVALUATOR.casefold()
+        )
+    except (KeyError, TypeError, ValueError):
+        return False
 
 
 def process_benchmark_refresh(session: Session, config: Settings) -> int:
@@ -96,11 +115,15 @@ def process_benchmark_refresh(session: Session, config: Settings) -> int:
     request = {
         "model": job.model,
         "query": (
-            f"Find current, source-documented benchmark results for the exact AI model "
-            f"named {model.name!r}. Preserve each benchmark version, score metric, evaluator "
-            "or protocol, report date, numeric scale and original report source. Do not include "
-            "other models or infer missing values."
+            f"Find the current model-level {PRIMARY_BENCHMARK} result for the exact AI model "
+            f"named {model.name!r}. Search only Artificial Analysis model benchmark pages. "
+            "Do not use the Coding Agent Index or assign an agent/harness score to a model. "
+            f"Return only {PRIMARY_BENCHMARK!r}, use metric {PRIMARY_BENCHMARK_METRIC!r} and "
+            f"evaluator {PRIMARY_EVALUATOR!r}, and preserve the published index version, numeric "
+            "score, report date, scale and source URL. Return no benchmark candidate unless the "
+            "source excerpt explicitly associates this exact model with the score."
         ),
+        "search_domain_filter": PRIMARY_SOURCE_DOMAIN,
         "max_output_tokens": 2000,
     }
     try:
@@ -109,6 +132,7 @@ def process_benchmark_refresh(session: Session, config: Settings) -> int:
             candidate
             for candidate in report.get("benchmark_candidates", [])
             if candidate["model_name"].casefold().strip() == model.name.casefold().strip()
+            and primary_benchmark_candidate(candidate)
         ]
         imported = persist_research_benchmarks(session, candidates, refresh_item_id=item.id)[
             "imported"

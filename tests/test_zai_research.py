@@ -210,6 +210,25 @@ def test_no_approved_sources_means_no_summary_request(monkeypatch):
     assert len(calls) == 1
 
 
+def test_benchmark_search_can_be_restricted_to_one_primary_domain(monkeypatch):
+    calls = []
+
+    def post(endpoint, request, key):
+        calls.append((endpoint, request, key))
+        return search_response() if endpoint.endswith("/web_search") else summary_response()
+
+    monkeypatch.setattr(zai_research, "post_json", post)
+    zai_research.fetch_zai_research(
+        {
+            "query": "fixture benchmark",
+            "model": "glm-4.7-flash",
+            "search_domain_filter": "artificialanalysis.ai",
+        },
+        "fixture",
+    )
+    assert calls[0][1]["search_domain_filter"] == "artificialanalysis.ai"
+
+
 def test_zai_timeout_is_not_retried_or_redirected_to_another_provider(configured, monkeypatch):
     calls = []
 
