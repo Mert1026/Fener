@@ -77,7 +77,14 @@ async def request_context(request: Request, call_next: Any) -> Any:
         key = request.client.host if request.client else "unknown"
         now = time.monotonic()
         if key not in windows and len(windows) >= 4096:
-            windows.clear()
+            # Evict fully-expired buckets first. A blanket clear() would grant
+            # every active client a fresh rate budget, so an IP-flooding
+            # attacker could reset the operator's own limit at will.
+            expired = [k for k, w in windows.items() if not w or w[0] <= now - 60]
+            for stale_key in expired:
+                del windows[stale_key]
+            if len(windows) >= 4096:
+                windows.clear()
         window = windows[key]
         while window and window[0] <= now - 60:
             window.popleft()
