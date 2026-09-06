@@ -255,3 +255,6 @@ __marimo__/
 /.ai-harness/state
 *.jsonl
 *.json
+.ai-harness/state/decisions.jsonl
+/.ai-harness
+*.json
