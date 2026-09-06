@@ -5,6 +5,7 @@ from fener.config import Settings
 from fener.db import utcnow
 from fener.private_models import SyncRequest
 from fener.sources.ingestion import sync_source
+from fener.sources.registry import SOURCES
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -17,6 +18,13 @@ def process_queue(session: Session, config: Settings) -> int:
         select(SyncRequest).where(SyncRequest.status == "running", SyncRequest.created_at < expired)
     ):
         stale.status, stale.active_source, stale.completed_at = "interrupted", None, utcnow()
+    session.commit()
+    for retired in session.scalars(
+        select(SyncRequest).where(
+            SyncRequest.status == "queued", SyncRequest.source_id.not_in(SOURCES)
+        )
+    ):
+        retired.status, retired.active_source, retired.completed_at = "retired", None, utcnow()
     session.commit()
     row = session.scalar(
         select(SyncRequest)

@@ -70,7 +70,6 @@ def normalize_models(payload: Any) -> list[NormalizedRecord]:
                 canonical=True,
                 publisher_id=key.split("/")[0] if "/" in key else None,
                 model_facts=facts,
-                benchmarks=raw.get("benchmarks", []),
                 raw=raw,
             )
         )

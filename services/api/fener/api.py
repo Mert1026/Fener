@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 
 from fener.analytics import comparable_scores
 from fener.api_schemas import DeploymentView, ModelDetail, ModelPage, ProviderView
+from fener.benchmark_refresh_api import router as benchmark_refresh_router
 from fener.catalog import (
     benchmark_groups,
     benchmark_results,
@@ -52,6 +53,7 @@ from fener.recommendations import (
 )
 from fener.research import router as research_router
 from fener.security import require_admin
+from fener.sources.registry import SOURCES
 from fener.value_comparison import equal_prices
 
 app = FastAPI(
@@ -61,6 +63,7 @@ app = FastAPI(
 )
 app.include_router(private_router)
 app.include_router(research_router)
+app.include_router(benchmark_refresh_router)
 DB = Annotated[Session, Depends(session_dependency)]
 Admin = Annotated[None, Depends(require_admin)]
 log = structlog.get_logger()
@@ -394,7 +397,9 @@ def sources(session: DB) -> list[dict[str, Any]]:
             "last_success_at": source.last_success_at,
             "interval_seconds": source.interval_seconds,
         }
-        for source in session.scalars(select(Source).order_by(Source.name))
+        for source in session.scalars(
+            select(Source).where(Source.id.in_(SOURCES)).order_by(Source.name)
+        )
     ]
 
 

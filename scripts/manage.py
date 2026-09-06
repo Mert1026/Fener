@@ -88,7 +88,7 @@ def main():
         action="store_true",
         help="Explicit lightweight fallback when creating a new .env",
     )
-    parser.add_argument("--source", choices=["models_dev", "openrouter", "litellm", "llm_stats"])
+    parser.add_argument("--source", choices=["models_dev", "litellm"])
     parser.add_argument("--docker", action="store_true", help="Use the Compose database for backup")
     args = parser.parse_args()
     commands = {

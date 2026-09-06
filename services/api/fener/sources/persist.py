@@ -85,6 +85,25 @@ class CatalogWriter:
             existing = self.deployments.get(digest(row.provider_id, row.api_id, variant))
             if existing:
                 model = self.models_by_id[existing.model_id]
+        # A source may gain enough exact identity information after a candidate
+        # was first discovered. Promote that same row in place so its aliases,
+        # deployments, evidence, and history retain stable IDs.
+        promoted_identity = False
+        if model is not None and row.canonical and model.identity_status != "resolved":
+            canonical_model = self.models.get(canonical_key)
+            if canonical_model is None or canonical_model.id == model.id:
+                self.models.pop(model.identity_key, None)
+                model.identity_key = canonical_key
+                model.identity_status = "resolved"
+                if row.publisher_id:
+                    if row.publisher_id not in self.organizations:
+                        organization = Organization(id=row.publisher_id, name=row.publisher_id)
+                        self.session.add(organization)
+                        self.organizations[organization.id] = organization
+                        self.session.flush()
+                model.publisher_id = row.publisher_id
+                self.models[canonical_key] = model
+                promoted_identity = True
         new_model = model is None
         if model is None:
             key = (
@@ -132,7 +151,7 @@ class CatalogWriter:
             )
             self.session.add(alias)
             self.aliases[(self.source_id, row.external_id)] = alias
-        changed = new_model
+        changed = new_model or promoted_identity
         for field, value in {"name": row.name, **row.model_facts}.items():
             # Deployment labels are evidence but cannot overwrite canonical model names.
             if field == "name" and not row.canonical and not new_model:

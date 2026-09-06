@@ -4,6 +4,12 @@ from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
 from fener.sources.contracts import NativePrice, NormalizedRecord
 
+# For a first-party OpenAI deployment, the access provider namespace and API
+# model ID identify the model exactly. This resolves identity only; LiteLLM's
+# prices and capabilities remain aggregated evidence with their normal source
+# authority in CatalogWriter.
+DIRECT_MODEL_PUBLISHERS = {"openai"}
+
 
 class Entry(BaseModel):
     model_config = ConfigDict(extra="allow")
@@ -59,6 +65,12 @@ def normalize(payload: Any) -> list[NormalizedRecord]:
                 external_id=external_id,
                 name=api_id,
                 canonical_id=hint,
+                canonical=provider in DIRECT_MODEL_PUBLISHERS and "/" not in external_id,
+                publisher_id=(
+                    provider
+                    if provider in DIRECT_MODEL_PUBLISHERS and "/" not in external_id
+                    else None
+                ),
                 provider_id=provider,
                 provider_name=provider,
                 api_id=api_id,

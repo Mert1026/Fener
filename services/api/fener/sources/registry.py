@@ -18,13 +18,6 @@ SOURCES = {
         "https://github.com/anomalyco/models.dev/blob/dev/LICENSE",
         "models.dev contributors · MIT",
     ),
-    "openrouter": SourceSpec(
-        "openrouter",
-        "OpenRouter",
-        "https://openrouter.ai/api/v1/models",
-        "https://openrouter.ai/terms",
-        "OpenRouter · provider marketplace data",
-    ),
     "litellm": SourceSpec(
         "litellm",
         "LiteLLM",
@@ -32,11 +25,8 @@ SOURCES = {
         "https://github.com/BerriAI/litellm/blob/main/LICENSE",
         "Berri AI · MIT",
     ),
-    "llm_stats": SourceSpec(
-        "llm_stats",
-        "LLM Stats",
-        "https://api.zeroeval.com/stats/v1/models",
-        "https://llm-stats.com/legal/terms-of-service",
-        "LLM Stats · https://llm-stats.com",
-    ),
 }
+
+# Keep previously ingested evidence in the database, but never schedule, queue,
+# or fetch these removed integrations.
+RETIRED_SOURCES = frozenset({"openrouter", "llm_stats"})

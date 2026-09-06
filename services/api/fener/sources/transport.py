@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 
 import httpx
 
-ALLOWED_HOSTS = {"models.dev", "openrouter.ai", "raw.githubusercontent.com", "api.zeroeval.com"}
+ALLOWED_HOSTS = {"models.dev", "raw.githubusercontent.com"}
 MAX_RESPONSE_BYTES = 32 * 1024 * 1024
 
 

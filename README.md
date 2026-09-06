@@ -32,19 +32,19 @@ For an explicit lightweight fallback on a **new checkout**, use `setup --sqlite`
 
 ```sh
 python scripts/manage.py sync --source models_dev
-python scripts/manage.py sync --source openrouter
+python scripts/manage.py sync --source models_dev
 python scripts/manage.py sync --source litellm
 python scripts/manage.py check
 ```
 
 ## What is implemented
 
-- Real models.dev, OpenRouter and LiteLLM adapters, raw snapshots, conditional fetching, failure isolation, scheduled and manually queued syncs.
+- Real models.dev and LiteLLM adapters, raw snapshots, conditional fetching, failure isolation, scheduled and manually queued syncs.
 - Canonical catalog, conservative identity matching, audited deployment identity corrections, append-only fact and price history, source precedence, conflicts and market events.
 - Overview, model explorer/detail, providers/detail, comparison with deployment selection, cost calculator, benchmarks, market feed and deterministic recommendations with constraints, coverage and fallback chains.
 - Market cards with readable rates and directional changes. Numerically equivalent prices do not create change events; existing formatting-only events are hidden without deleting audit history.
 - Benchmark browsing by name **and reported metric**, with original report links, dates and explicit evidence gaps. Elo and win-rate scores are never shown as one ranking.
-- Optional, private AI research with clickable citations, explicit approval per run, usage caps and no automatic catalog writes. Harness/evaluation screens are removed for now; their API operations are disabled by default and existing data is preserved.
+- Optional, private AI research with clickable citations, explicit approval per run and usage caps. A separate **Update all benchmarks** action queues cited research for every resolved catalog model. Only complete benchmark claims enter a separate unverified table; prices, identities and other catalog facts never change automatically. Harness/evaluation screens are removed for now; their API operations are disabled by default and existing data is preserved.
 - Price/quality normalization and Pareto calculation **only when comparable versioned evidence exists**. Missing methodology produces an explained empty state, never invented points.
 - Same-origin authenticated server proxy, signed expiring sessions, private API boundaries, source allowlists, body limits, rate limits, backups, catalog-only exports and CI.
 
@@ -52,15 +52,17 @@ The current live catalog was fetched from real sources. There is no production s
 
 ## Optional AI research
 
-Add `OPENAI_API_KEY` to the ignored root `.env`, restart the API, unlock Settings with your local `FENER_ADMIN_KEY`, and open **AI research**. Never paste provider keys into research questions. Each run sends the approved question to OpenAI and web search and may incur charges. Without a key the catalog and source syncs still work.
+Add `ZAI_API_KEY` to the ignored root `.env`, restart Fener, unlock Settings with your local `FENER_ADMIN_KEY`, and open **AI research**. Never paste the key into research questions. Every run sends the approved question to Z.ai and may incur charges. This is Fener's only provider API key. Public catalog syncs work without it.
 
-The default research model is `gpt-5.4-mini`; `FENER_RESEARCH_MODEL` can select another compatible Responses/web-search model. Each request permits up to two web-tool calls and 2,000 output tokens; `FENER_RESEARCH_DAILY_LIMIT` defaults to five attempts in the last 24 hours, including failed/uncertain attempts. These are usage caps, not a dollar budget. No automatic retries or scheduled AI runs occur. Saved notes remain unverified and never overwrite prices, benchmark scores or identities. See [research and security](SECURITY.md).
+Each approved run makes one Z.ai `search-prime` request followed by one cited summary, capped at 8,000 output tokens. Z.ai uses its **general API**, not the Coding Plan endpoint. Model and search access/credit must be available on that account. Z.ai may retrieve broadly; Fener filters results to approved domains before summarization, and does not fetch the full pages. No qualifying excerpts means no summary call.
+
+Benchmark pages use only the current comparable cohort embedded in Artificial Analysis's public models page. Public catalog feeds and ordinary manual research notes do not populate benchmarks. Pressing **Update all benchmarks** reads that dataset once, detects its exact Intelligence Index version and matches its source model identities against every resolved catalog model. Coding Agent Index results are never imported because harness and execution settings affect them. Extracted claims retain the exact source variant and page link, remain labeled unverified, and are grouped by exact benchmark name, version, evaluator and metric. Models outside the published current cohort remain `no_evidence`; scores are never guessed to force catalog-wide coverage. Benchmark updates do not use Z.ai or incur inference charges.
+
+`FENER_RESEARCH_DAILY_LIMIT` defaults to five manual Z.ai attempts in the last 24 hours, including failed/uncertain attempts. This manual-note cap does not apply to the direct Artificial Analysis benchmark update and is not a dollar budget. Approval is tied to the displayed model. No automatic retries, fallbacks or scheduled AI runs occur. Saved notes and extracted benchmarks remain unverified and never overwrite prices, identities or historical evidence. See [research and security](SECURITY.md).
 
 ## Source coverage and limits
 
-LLM Stats requires `LLM_STATS_API_KEY` in the server `.env`. Its documented catalog adapter is implemented, but authenticated benchmark-detail ingestion is gated until its live response contract can be verified. Current catalog benchmark observations lack sufficient methodology for a trustworthy cross-model quality ranking.
-
-OpenRouter endpoint collection defaults to a deterministic sample of 20 models, not the entire endpoint market. Serving performance and provider policies remain unknown when the sources do not supply them. Cost estimates use listed flat rates and disclose excluded tiers, taxes and fees.
+OpenRouter, LLM Stats and OpenAI integrations are removed. Old source evidence is retained for provenance and marked retired, but cannot be fetched, queued or scheduled. Artificial Analysis benchmark claims remain unverified, so Fener still has no reviewed cross-model quality ranking. Serving performance and provider policies remain unknown when the active public sources do not supply them. Cost estimates use listed flat rates and disclose excluded tiers, taxes and fees.
 
 This is a working foundation, not a claim that every advanced feature in the product vision is finished. [Implementation status](docs/status.md) records the remaining work and validation limits.
 

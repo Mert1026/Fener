@@ -697,6 +697,76 @@
         ]
       }
     },
+    "/api/v1/benchmark-refresh": {
+      "get": {
+        "tags": ["Benchmark research"],
+        "summary": "Get Refresh",
+        "operationId": "get_refresh_api_v1_benchmark_refresh_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Refresh Api V1 Benchmark Refresh Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": ["Benchmark research"],
+        "summary": "Start Refresh",
+        "operationId": "start_refresh_api_v1_benchmark_refresh_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Start Refresh Api V1 Benchmark Refresh Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/healthz": {
       "get": {
         "summary": "Health",
@@ -2379,12 +2449,41 @@
         "type": "object",
         "title": "RecommendationInput"
       },
+      "RefreshInput": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Request Id"
+          },
+          "acknowledge_cost": {
+            "type": "boolean",
+            "const": true,
+            "title": "Acknowledge Cost"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": ["request_id", "acknowledge_cost"],
+        "title": "RefreshInput"
+      },
       "ResearchInput": {
         "properties": {
           "request_id": {
             "type": "string",
             "format": "uuid",
             "title": "Request Id"
+          },
+          "provider": {
+            "type": "string",
+            "const": "zai",
+            "title": "Provider"
+          },
+          "model": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Model"
           },
           "query": {
             "type": "string",
@@ -2400,7 +2499,13 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["request_id", "query", "acknowledge_cost"],
+        "required": [
+          "request_id",
+          "provider",
+          "model",
+          "query",
+          "acknowledge_cost"
+        ],
         "title": "ResearchInput"
       },
       "SuiteInput": {

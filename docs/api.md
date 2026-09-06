@@ -8,7 +8,7 @@ FastAPI serves versioned REST resources under `/api/v1`. Interactive documentati
 - `GET /models/{id}`: intrinsic facts, deployment evidence, benchmark results.
 - `GET /models/{id}/deployments`, `/models/{id}/pricing`.
 - `GET /deployments`, `/providers`, `/providers/{id}`.
-- `GET /benchmarks` (optional `group_id`) and `/benchmarks/groups`: latest source-confirmed observations grouped by benchmark name and reported score metric. Report URL/date and methodology gaps accompany results.
+- `GET /benchmarks` (optional `group_id`) and `/benchmarks/groups`: latest source-extracted observations grouped by exact benchmark name, version, evaluator and metric. Report URL/date, cited page title and methodology gaps accompany results.
 - `GET /market-events`: material events, filtering legacy equivalent-price changes before pagination. Values remain structured in the API; the UI formats them as cards.
 - `GET /sources`, `/overview`.
 - `GET /observations/{id}`: normalized value, original source record and snapshot reference.
@@ -23,8 +23,10 @@ Prices serialize as decimal strings, never binary floating-point money. Dates us
 
 Send `Authorization: Bearer <FENER_ADMIN_KEY>`. Unconfigured authentication disables private access rather than making it public.
 
-- `GET /research`: configuration readiness and private research history; never returns provider keys.
-- `POST /research`: `request_id` (UUID), `query` (10–1,500 characters), and `acknowledge_cost: true`. Requires local `OPENAI_API_KEY`; returns a saved note/status, never a catalog mutation. Reusing an ID returns its existing attempt; a different query for the same ID conflicts. Daily limits include unsuccessful attempts. Connection failures can leave an `uncertain` result and are never retried automatically.
+- `GET /research`: configured provider/name/model, required key-variable name, local limits, source policy and private history; never returns provider keys. `configured` indicates a local key exists, not verified account access or credit.
+- `POST /research`: `request_id` (UUID), `provider: "zai"`, `model`, `query` (10–1,500 characters), and `acknowledge_cost: true`. The approved model must match current server configuration; mismatch returns 409 before any Z.ai call. Requires local `ZAI_API_KEY`. Returns a saved note/status, never a catalog mutation. Reusing an ID returns its existing attempt; a different query/model for that ID conflicts. Daily limits include unsuccessful attempts. Connection failures can leave an `uncertain` result and are never retried automatically. Historical notes retain their original provider label.
+
+`GET /benchmark-refresh` returns the latest private catalog-wide refresh status. `POST /benchmark-refresh` requires `request_id` and `acknowledge_cost: true`; it snapshots every resolved catalog model into a durable queue and returns 202. The worker reads Artificial Analysis's public models page once, parses the single current Intelligence Index cohort and matches unique normalized source identities to catalog models. Only model-level Artificial Analysis Intelligence Index claims are accepted; Coding Agent Index claims are excluded. Complete claims enter `research_benchmarks` with their source model page, exact index version and source variant title. `GET /benchmarks`, model-detail benchmark lists and `GET /benchmarks/groups` expose only those source-extracted rows. They are always `source_extracted_unverified`; legacy catalog benchmark rows are hidden, and normalized benchmark analytics exclude every unreviewed extraction. A source outage or format change pauses the queue without counting models and exposes a Resume action.
 
 Harness, telemetry and evaluation operations listed below are **paused** and return 410 after authentication unless deliberately re-enabled on the server. The web proxy does not expose them. Existing stored data remains intact. Source jobs and identity review operations continue to work.
 

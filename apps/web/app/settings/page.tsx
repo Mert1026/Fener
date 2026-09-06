@@ -47,9 +47,9 @@ export default function SettingsPage() {
           <h2>Unlock private intelligence</h2>
           <p>
             Use <code>FENER_ADMIN_KEY</code> from your local <code>.env</code>{" "}
-            file to access harnesses, evaluations and detailed data health.
-            Provider API keys stay on the server. The browser receives an
-            HttpOnly session cookie.
+            file to access AI research and detailed data health. Provider API
+            keys stay on the server. The browser receives an HttpOnly session
+            cookie.
           </p>
           <form onSubmit={login}>
             <div className="field">
@@ -86,22 +86,23 @@ export default function SettingsPage() {
           )}
         </section>
         <section className="panel settings-panel">
-          <h2>Source credentials & scheduling</h2>
+          <h2>Public data scheduling</h2>
           <p>
             Configure server-only values in the root <code>.env</code>, then
             restart the API and worker.
           </p>
-          <pre className="code-block">{`LLM_STATS_API_KEY=…\nOPENROUTER_API_KEY=…  # optional for public catalogs\nFENER_SYNC_INTERVAL_SECONDS=21600\nFENER_OPENROUTER_ENDPOINT_LIMIT=20`}</pre>
+          <pre className="code-block">{`FENER_SYNC_INTERVAL_SECONDS=21600`}</pre>
           <p style={{ marginTop: 17 }}>
             This screen never returns stored secrets. Source sync runs via{" "}
             <code>uv run fener sync</code>; continuous schedules run via{" "}
             <code>uv run fener worker</code>.
           </p>
           <p style={{ marginTop: 17 }}>
-            Public models.dev, OpenRouter and LiteLLM catalog syncs work without
-            an AI key. LLM Stats needs its own source key; authenticated
-            benchmark detail ingestion still needs implementation and
-            verification. AI web research uses a separate OpenAI key.
+            models.dev and LiteLLM are public, read-only catalog feeds and need
+            no API key. OpenRouter, LLM Stats and OpenAI integrations are
+            removed. Existing evidence from retired sources remains available
+            for provenance, but Fener cannot queue or schedule new calls to
+            them.
           </p>
         </section>
         <section className="panel settings-panel">
@@ -109,10 +110,18 @@ export default function SettingsPage() {
           <p>
             Search filters the ingested catalog; recommendations use explicit
             rules and evidence. The research desk can make explicitly approved
-            OpenAI web-search calls. Its cited notes stay separate from catalog
+            Z.ai research calls. Its cited notes stay separate from catalog
             facts. No scheduled AI calls or automatic data changes run.
           </p>
-          <pre className="code-block">{`OPENAI_API_KEY=…\nFENER_RESEARCH_MODEL=gpt-5.4-mini\nFENER_RESEARCH_DAILY_LIMIT=5`}</pre>
+          <pre className="code-block">{`ZAI_API_KEY=…\nFENER_ZAI_RESEARCH_MODEL=glm-4.7-flash\nFENER_RESEARCH_DAILY_LIMIT=5`}</pre>
+          <p>
+            Z.ai uses its general API for one search and one cited summary per
+            approved run. General API/search access may be billed separately
+            from a Coding Plan. This is the only API key Fener uses. The
+            Benchmarks page has a separate Update all benchmarks action that
+            queues every resolved model; public catalog feeds do not fill
+            benchmarks.
+          </p>
           <p>
             Restart the API after configuring these values. Every research run
             requires approval in the research desk. Harnesses and evaluations

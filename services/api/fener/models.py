@@ -258,6 +258,38 @@ class BenchmarkResult(Base):
     evaluated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+class ResearchBenchmark(Base):
+    """Unverified benchmark claim extracted from cited AI research."""
+
+    __tablename__ = "research_benchmarks"
+    __table_args__ = (
+        CheckConstraint(
+            "(research_run_id IS NOT NULL AND refresh_item_id IS NULL) OR "
+            "(research_run_id IS NULL AND refresh_item_id IS NOT NULL)",
+            name="one_origin",
+        ),
+    )
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    research_run_id: Mapped[str | None] = mapped_column(ForeignKey("research_runs.id"), index=True)
+    refresh_item_id: Mapped[str | None] = mapped_column(
+        ForeignKey("benchmark_refresh_items.id"), index=True
+    )
+    model_id: Mapped[str] = mapped_column(ForeignKey("models.id"), index=True)
+    name: Mapped[str] = mapped_column(String(300), index=True)
+    version: Mapped[str] = mapped_column(String(100))
+    category: Mapped[str] = mapped_column(String(60), default="unclassified")
+    metric: Mapped[str] = mapped_column(String(100))
+    score: Mapped[Decimal] = mapped_column(Numeric(20, 8))
+    evaluator: Mapped[str] = mapped_column(String(300))
+    source_url: Mapped[str] = mapped_column(Text)
+    source_title: Mapped[str] = mapped_column(String(500))
+    reported_date: Mapped[str | None] = mapped_column(String(40))
+    higher_is_better: Mapped[bool | None]
+    score_min: Mapped[Decimal | None] = mapped_column(Numeric(20, 8))
+    score_max: Mapped[Decimal | None] = mapped_column(Numeric(20, 8))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
 class RecommendationRun(Base):
     __tablename__ = "recommendation_runs"
     id: Mapped[str] = mapped_column(String(36), primary_key=True)

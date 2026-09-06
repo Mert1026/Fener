@@ -196,6 +196,24 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/benchmark-refresh": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Refresh */
+    get: operations["get_refresh_api_v1_benchmark_refresh_get"];
+    put?: never;
+    /** Start Refresh */
+    post: operations["start_refresh_api_v1_benchmark_refresh_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/healthz": {
     parameters: {
       query?: never;
@@ -809,6 +827,19 @@ export interface components {
        */
       limit: number;
     };
+    /** RefreshInput */
+    RefreshInput: {
+      /**
+       * Request Id
+       * Format: uuid
+       */
+      request_id: string;
+      /**
+       * Acknowledge Cost
+       * @constant
+       */
+      acknowledge_cost: true;
+    };
     /** ResearchInput */
     ResearchInput: {
       /**
@@ -816,6 +847,13 @@ export interface components {
        * Format: uuid
        */
       request_id: string;
+      /**
+       * Provider
+       * @constant
+       */
+      provider: "zai";
+      /** Model */
+      model: string;
       /** Query */
       query: string;
       /**
@@ -1411,6 +1449,63 @@ export interface operations {
     responses: {
       /** @description Successful Response */
       201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_refresh_api_v1_benchmark_refresh_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+    };
+  };
+  start_refresh_api_v1_benchmark_refresh_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RefreshInput"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      202: {
         headers: {
           [name: string]: unknown;
         };

@@ -1,4 +1,54 @@
-# Validation record — 2026-08-31
+# Validation record — 2026-09-05
+
+## Artificial Analysis comparable benchmark research
+
+- A live diagnostic proved Z.ai's search backend ignored its Artificial Analysis domain filter and returned another approved domain. The active 431-model refresh was paused at 60 processed models to stop wasting requests; it had zero imports, 46 failures and 14 no-evidence items. No items or history were deleted.
+- The benchmark worker now reads the structured current cohort embedded in Artificial Analysis's public models page with one bounded GET and no Z.ai requests. It accepts only the model-level Artificial Analysis Intelligence Index with its published version, evaluator and `index points` metric. Coding Agent Index claims are excluded because agent harness, tool and execution configuration affect those results.
+- Benchmark groups now use exact benchmark name, version, evaluator and metric. This prevents different index versions or evaluators from appearing in one comparison. The original Artificial Analysis page title is returned and displayed so the tested model or reasoning-effort variant remains inspectable.
+- Every resolved catalog model is checked when the user starts an update. Only unique catalog/source identity matches in the single current index version are imported; unscored, ambiguous or absent models receive `no_evidence`. Fener does not create a score merely to fill the catalog.
+- Reprocessed the paused live queue from the captured current source response: 431/431 models completed, 20 v4.2 scores were imported, 411 models were marked `no_evidence`, and zero remained failed or uncertain. The resulting API exposes one 20-model cohort with the same version, evaluator, metric and direction.
+- Ruff, formatting, strict mypy and all 90 backend tests passed with PostgreSQL integration enabled. TypeScript, ESLint, all 16 frontend tests and the production Next.js build passed.
+
+## Empty benchmark refresh diagnosis
+
+- Inspected the completed 363-model refresh directly: zero benchmark rows were stored; 284 items failed validation, 18 timed out or were interrupted, and 61 completed with no usable benchmark candidate. Of the validation failures, 276 ended in under ten seconds, consistent with rejection during search/evidence validation. The worker did not retain the 61 narrative summaries because the queue was designed to persist only accepted benchmark claims.
+- The benchmark page now states explicitly when a completed update produced no saved claims, shows per-status counts and grouped failure reasons, and warns against another paid update until the diagnostics have been reviewed. Nothing is presented as a hidden or successful benchmark result.
+- Future empty-but-valid research is labeled `no_evidence` instead of `success`. Future validation failures retain the specific safe validation reason rather than collapsing every failure into one generic message. Existing historical statuses and the zero-result run were not rewritten, and no provider call was made during diagnosis.
+- Ruff, formatting, strict mypy and all 78 backend tests passed with PostgreSQL integration enabled. TypeScript, ESLint and all 15 frontend tests passed.
+
+## Fresh OpenAI model discovery — 2026-09-04
+
+- Confirmed GPT-6 Astra against OpenAI's announcement and API model documentation. The current LiteLLM feed already contained its exact direct OpenAI API ID and pricing, but Fener had isolated it as an unresolved candidate and therefore hid it from the default catalog and benchmark queue.
+- Direct first-party OpenAI entries now resolve the exact `openai/<api-model-id>` identity while retaining LiteLLM's aggregated evidence label and authority. Existing candidates are promoted in place, preserving their IDs, aliases, deployments, prices and evidence history. Exact searches also include unresolved discoveries so a new source row remains findable before identity resolution.
+- Replayed the current public LiteLLM snapshot: `gpt-6-astra` is resolved under publisher `openai`, with one direct deployment and last-confirmed $10 input / $50 output prices per million tokens. Browser QA confirmed the Models page returns the row with unresolved identities disabled. No Z.ai call was made.
+- Ruff, formatting, strict mypy and all 77 backend tests passed with PostgreSQL integration enabled. The only warning is the existing upstream Starlette/httpx test-client deprecation.
+
+## Catalog-wide AI benchmark refresh and larger manual output
+
+- Raised each approved manual Z.ai summary cap from 2,000 to 8,000 output tokens. Manual research still saves a private note only and never fills benchmark tables.
+- Added one authenticated **Update all benchmarks** action that snapshots every resolved catalog model into a durable queue. The worker researches one model at a time with at most one search and one 2,000-token summary. The UI shows model/result/failure progress and warns that a full refresh can take hours and incur substantial API charges.
+- Queue request IDs are idempotent. A second worker cannot duplicate a healthy in-flight request; an abandoned request is marked uncertain only after a five-minute safety window and is never retried automatically. No scheduled AI refresh was added.
+- Active source adapters no longer normalize benchmark rows. Benchmark APIs, model-detail benchmark lists and benchmark groups read only from the isolated `research_benchmarks` table populated by complete cited catalog-refresh claims. The 656 legacy source-ingested results remain stored but are hidden from benchmark and normalized-analytics APIs.
+- AI candidates require bounded decimal strings, complete metric/version/evaluator fields, a valid retrieved-evidence citation and an exact match to the queued catalog model name. Results are labeled `ai_extracted_unverified` and always excluded from rankings, normalized quality analytics and recommendations. The UI links the original cited report rather than presenting Z.ai as the benchmark source.
+- Migrations `b2d17a4f3c91`, `c9036f1a52de` and `d71a6e4c8b12` define the isolated benchmark storage, durable refresh queue and one-origin integrity constraint. The AI benchmark table currently has zero rows because no paid Z.ai call was made. Live benchmark and normalized-analytics endpoints remain empty until the user presses the button and valid claims are returned.
+- 73 backend tests passed with PostgreSQL integration enabled before the final one-origin constraint hardening. Final verification passed 73 backend tests with the PostgreSQL test skipped after Docker became unavailable, plus a fresh SQLite upgrade/schema-check/downgrade/re-upgrade cycle through both new migrations. All 14 frontend tests, Ruff, formatting, mypy, TypeScript, ESLint, OpenAPI generation and the production Next.js build passed. Provider behavior was exercised with mocks only. In-app browser QA confirmed the locked button, cost warning and empty state with no console errors.
+
+## Z.ai-only provider configuration
+
+- Removed the OpenRouter and LLM Stats catalog integrations and OpenAI research integration from configuration, source registry, source network allowlist, CLI, worker scheduling, API request schema and Settings. The only provider credential is `ZAI_API_KEY`; models.dev and LiteLLM remain active public feeds and need no key.
+- The PostgreSQL source rows for OpenRouter and LLM Stats are disabled and marked `retired`; no queued/running requests existed. Prior facts, raw snapshots and citations were preserved. The public source endpoint and browser Data health view expose only `litellm` and `models_dev`.
+- 68 backend tests passed with PostgreSQL integration enabled and 13 frontend tests passed. Ruff, formatting, mypy, TypeScript, ESLint, OpenAPI generation and the production Next.js build passed. Tests include removed-source fetch rejection, retired-history behavior, daily Z.ai limits, citation URL validation and paused-feature access controls. Removed adapter-specific tests account for the lower backend count.
+- The running stack reported only Z.ai research (`glm-4.7-flash`, configured locally) and rejected an OpenAI research payload with 422 before provider execution. In-app browser checks confirmed the Z.ai-only Settings copy and two active public-source cards with no console errors. No paid Z.ai call was made.
+
+## Earlier Z.ai provider addition (before provider consolidation)
+
+- 80 backend tests passed with PostgreSQL integration enabled. All 13 frontend tests passed, including invalidating approval when the provider/model changes. Ruff, mypy, TypeScript, ESLint, the production Next.js build, authored-file formatting and OpenAPI freshness checks passed.
+- Mocked Z.ai transport tests cover one search followed by one summary, approved-domain excerpt filtering, citations tied to retrieved sources, incomplete output, timeouts, idempotency, no catalog writes and credential isolation. Both catalog connectors reject credentials matching a configured research key before any network request. No paid provider calls were made.
+- The local private research endpoint reports Z.ai with `glm-4.7-flash`, a configured key and zero research runs. OpenRouter and LLM Stats credential fields are empty. A configured key means only that a value is present; general API/search access, billing and live response quality remain unverified. No database migration was needed.
+- In-app browser checks confirmed the Z.ai configuration instructions and locked research page. Browser error logs were empty. The private form is component-tested; a live provider-generated report was not visually verified.
+- A scan of 191 project and built client files found no matches for active local credentials. `.env` remains ignored. Existing historical secret-scanner findings were not erased or suppressed.
+
+## Earlier validation — 2026-08-31
 
 ## Data focus, manual research and credential remediation
 

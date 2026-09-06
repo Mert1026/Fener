@@ -18,10 +18,12 @@ type Run = {
   id: string;
   query: string;
   model: string;
+  provider: "openai" | "zai";
   status: string;
   created_at: string;
   error: string | null;
   report: null | {
+    evidence_scope?: string;
     blocks: { text: string; url?: string; title?: string }[][];
     sources: { url: string; title: string }[];
     usage: { input_tokens?: number; output_tokens?: number };
@@ -29,6 +31,11 @@ type Run = {
 };
 type Research = {
   configured: boolean;
+  provider: "zai";
+  provider_name: string;
+  key_env: string;
+  request_limits: string;
+  source_policy: string;
   model: string;
   daily_limit: number;
   domains: string[];
@@ -37,7 +44,7 @@ type Research = {
 export default function ResearchPage() {
   const client = useQueryClient();
   const [question, setQuestion] = useState("");
-  const [approved, setApproved] = useState(false);
+  const [approval, setApproval] = useState("");
   const query = useQuery({
     queryKey: ["research"],
     queryFn: () => api<Research>("research"),
@@ -51,25 +58,31 @@ export default function ResearchPage() {
         method: "POST",
         body: JSON.stringify({
           request_id: crypto.randomUUID(),
+          provider: query.data?.provider,
+          model: query.data?.model,
           query: question.trim(),
           acknowledge_cost: approved,
         }),
       }),
     retry: false,
     onSuccess: () => {
-      setApproved(false);
+      setApproval("");
       client.invalidateQueries({ queryKey: ["research"] });
     },
     onError: () => {
       client.invalidateQueries({ queryKey: ["research"] });
     },
   });
+  const approvalKey = query.data
+    ? `${query.data.provider}:${query.data.model}`
+    : "";
+  const approved = !!approvalKey && approval === approvalKey;
   return (
     <>
       <PageHeader
         eyebrow="Research desk"
         title="Find the source. Check the claim."
-        description="Investigate benchmark methodology, pricing changes and missing model facts with cited web research."
+        description="Investigate pricing changes, missing model facts and individual methodology questions with cited web research. Use the Benchmarks page to update the entire catalog."
       />
       <div className="info-callout">
         <ShieldCheck size={19} />
@@ -117,7 +130,7 @@ export default function ResearchPage() {
                   rows={5}
                   onChange={(e) => {
                     setQuestion(e.target.value);
-                    setApproved(false);
+                    setApproval("");
                   }}
                 />
                 <div className="research-prompts">
@@ -130,7 +143,7 @@ export default function ResearchPage() {
                       type="button"
                       onClick={() => {
                         setQuestion(text);
-                        setApproved(false);
+                        setApproval("");
                       }}
                     >
                       {text}
@@ -141,7 +154,7 @@ export default function ResearchPage() {
                   <div className="research-setup">
                     <Info size={15} />
                     <p>
-                      Add <code>OPENAI_API_KEY</code> to the root{" "}
+                      Add <code>{query.data.key_env}</code> to the root{" "}
                       <code>.env</code> and restart the API. Keep the key local;
                       don’t paste it into this form.{" "}
                       <Link className="accent" href="/settings">
@@ -155,11 +168,14 @@ export default function ResearchPage() {
                     type="checkbox"
                     checked={approved}
                     required
-                    onChange={(e) => setApproved(e.target.checked)}
+                    onChange={(e) =>
+                      setApproval(e.target.checked ? approvalKey : "")
+                    }
                   />
                   <span>
-                    I approve sending this question to OpenAI and web search.
-                    This run may incur API charges.
+                    I approve sending this question to{" "}
+                    {query.data.provider_name} and web search. This run may
+                    incur API charges.
                   </span>
                 </label>
                 <button
@@ -193,22 +209,30 @@ export default function ResearchPage() {
               <aside className="panel research-guardrails">
                 <h2>Bounded, manual research</h2>
                 <dl>
+                  <dt>Provider</dt>
+                  <dd>{query.data.provider_name}</dd>
                   <dt>Research model</dt>
                   <dd>{query.data.model}</dd>
                   <dt>Per request</dt>
-                  <dd>Up to 2 web-tool calls and 2,000 output tokens</dd>
+                  <dd>{query.data.request_limits}</dd>
                   <dt>Last 24 hours</dt>
                   <dd>
                     Maximum {query.data.daily_limit} attempts, including
                     failures
                   </dd>
-                  <dt>Catalog writes</dt>
-                  <dd>None</dd>
+                  <dt>Data writes</dt>
+                  <dd>Private research note only</dd>
                 </dl>
                 <p>
                   These usage caps are not a fixed dollar budget. No automatic
                   retries or scheduled AI runs.
                 </p>
+                <p>
+                  Z.ai general API access is required. A Coding Plan
+                  subscription does not establish general API or search credit.
+                  Fener has no other key-based provider integration.
+                </p>
+                <p>{query.data.source_policy}</p>
                 <details>
                   <summary>
                     Search domains ({query.data.domains.length})
@@ -237,7 +261,9 @@ export default function ResearchPage() {
                       <div>
                         <h2>{run.query}</h2>
                         <p>
-                          {date(run.created_at)} · {run.model}
+                          {date(run.created_at)} ·{" "}
+                          {run.provider === "zai" ? "Z.ai" : "OpenAI"} ·{" "}
+                          {run.model}
                         </p>
                       </div>
                       <Badge tone="warning">{humanize(run.status)}</Badge>
@@ -255,6 +281,9 @@ export default function ResearchPage() {
                     )}
                     {run.report && (
                       <>
+                        {run.report.evidence_scope && (
+                          <p className="small">{run.report.evidence_scope}</p>
+                        )}
                         <div className="research-prose">
                           {run.report.blocks.map((parts, i) => (
                             <p key={i}>

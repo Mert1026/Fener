@@ -34,6 +34,7 @@ def client(monkeypatch):
             yield value
 
     monkeypatch.setattr(settings(), "fener_admin_key", SecretStr("test-admin-key"))
+    monkeypatch.setattr(settings(), "zai_api_key", SecretStr(""))
     app.dependency_overrides[session_dependency] = session
     windows.clear()
     with TestClient(app) as client:

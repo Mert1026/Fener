@@ -88,6 +88,7 @@ export type Benchmark = {
   evaluator: string;
   source: string;
   source_url: string;
+  source_title: string;
   comparable: boolean;
   metric: string;
   group_id: string;

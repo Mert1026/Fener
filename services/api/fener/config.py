@@ -11,14 +11,11 @@ class Settings(BaseSettings):
     fener_admin_key: SecretStr = SecretStr("")
     fener_app_mode: str = "private"
     fener_snapshot_dir: Path = Path(".data/snapshots")
-    openrouter_api_key: SecretStr = SecretStr("")
-    llm_stats_api_key: SecretStr = SecretStr("")
     fener_sync_interval_seconds: int = Field(default=21600, ge=3600)
-    fener_openrouter_endpoint_limit: int = Field(default=20, ge=0, le=1000)
     auto_apply_recommendations: bool = False
     fener_personal_features_enabled: bool = False
-    openai_api_key: SecretStr = SecretStr("")
-    fener_research_model: str = "gpt-5.4-mini"
+    zai_api_key: SecretStr = SecretStr("")
+    fener_zai_research_model: str = "glm-4.7-flash"
     fener_research_daily_limit: int = Field(default=5, ge=1, le=100)
 
 
