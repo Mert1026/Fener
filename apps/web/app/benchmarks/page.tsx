@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Info, Search, RefreshCw } from "lucide-react";
 import { api, isPrivateLocked, type Benchmark } from "@/lib/api";
 import { date } from "@/lib/format";
+import { requestId } from "@/lib/uuid";
 import {
   Badge,
   Empty,
@@ -68,7 +69,7 @@ export default function BenchmarksPage() {
       api<RefreshState>("benchmark-refresh", {
         method: "POST",
         body: JSON.stringify({
-          request_id: crypto.randomUUID(),
+          request_id: requestId(),
           acknowledge_cost: true,
         }),
       }),
