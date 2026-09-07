@@ -12,7 +12,7 @@ from fener.api_schemas import StrictInput
 from fener.config import settings
 from fener.db import session_dependency, utcnow
 from fener.evidence import digest
-from fener.models import Deployment, DeploymentAlias, Model, ModelAlias
+from fener.models import Deployment, DeploymentAlias, Model, ModelAlias, WatchlistItem
 from fener.private_models import (
     EvaluationCase,
     EvaluationRun,
@@ -31,8 +31,10 @@ from fener.sources.registry import SOURCES
 
 
 def personal_features_enabled(request: Request) -> None:
+    # The watchlist is catalog data (public models, local operator state) and
+    # runs no AI spend, so it stays available while harnesses are paused.
     if not settings().fener_personal_features_enabled and not request.url.path.startswith(
-        "/api/v1/internal/"
+        ("/api/v1/internal/", "/api/v1/watchlist")
     ):
         raise HTTPException(
             410, "Harnesses and evaluations are paused while Fener focuses on data."
@@ -512,3 +514,53 @@ def identity_overrides(session: DB) -> list[dict[str, Any]]:
             select(IdentityOverride).order_by(IdentityOverride.created_at.desc()).limit(100)
         )
     ]
+
+
+class WatchlistAdd(StrictInput):
+    model_id: str = Field(min_length=1, max_length=64)
+
+
+@router.get("/watchlist")
+def watchlist(session: DB) -> dict[str, Any]:
+    config = settings()
+    return {
+        "telegram_configured": bool(
+            config.fener_telegram_bot_token.get_secret_value() and config.fener_telegram_chat_id
+        ),
+        "items": [
+            {
+                "model_id": item.model_id,
+                "model_name": model.name,
+                "identity_status": model.identity_status,
+                "created_at": item.created_at,
+            }
+            for item, model in session.execute(
+                select(WatchlistItem, Model)
+                .join(Model, WatchlistItem.model_id == Model.id)
+                .order_by(WatchlistItem.created_at)
+            )
+        ],
+    }
+
+
+@router.post("/watchlist", status_code=201)
+def watch_add(request: WatchlistAdd, session: DB) -> dict[str, str]:
+    model = session.get(Model, request.model_id)
+    if model is None:
+        raise HTTPException(404, "Model not found")
+    if session.scalar(select(WatchlistItem.id).where(WatchlistItem.model_id == request.model_id)):
+        raise HTTPException(409, "This model is already on the watchlist")
+    item = WatchlistItem(id=str(uuid4()), model_id=request.model_id)
+    session.add(item)
+    session.commit()
+    return {"model_id": model.id, "model_name": model.name, "status": "watching"}
+
+
+@router.delete("/watchlist/{model_id}")
+def watch_remove(model_id: str, session: DB) -> dict[str, str]:
+    item = session.scalar(select(WatchlistItem).where(WatchlistItem.model_id == model_id))
+    if item is None:
+        raise HTTPException(404, "This model is not on the watchlist")
+    session.delete(item)
+    session.commit()
+    return {"model_id": model_id, "status": "removed"}

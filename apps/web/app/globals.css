@@ -2089,3 +2089,71 @@ th button {
     transform: none;
   }
 }
+
+/* Since-your-last-visit digest */
+.since-digest {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+.since-digest-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.since-digest-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.since-digest-link {
+  font-size: 13px;
+  white-space: nowrap;
+}
+.since-digest-list {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+
+/* Watchlist */
+.detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.watchlist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.watchlist li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.22);
+}
+.watchlist li:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.button.small {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .since-digest,
+  .watchlist li {
+    transition: none;
+  }
+}

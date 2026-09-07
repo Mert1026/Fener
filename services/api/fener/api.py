@@ -1,5 +1,6 @@
 import time
 from collections import defaultdict, deque
+from datetime import datetime
 from decimal import Decimal
 from functools import lru_cache
 from typing import Annotated, Any, Literal
@@ -307,6 +308,7 @@ def market_events(
     session: DB,
     event_type: str | None = None,
     entity_id: str | None = None,
+    since: datetime | None = None,
     offset: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
 ) -> list[dict[str, Any]]:
@@ -323,6 +325,8 @@ def market_events(
         query = query.where(MarketEvent.event_type == event_type)
     if entity_id:
         query = query.where(MarketEvent.entity_id == entity_id)
+    if since:
+        query = query.where(MarketEvent.detected_at >= since)
     material = []
     skipped = 0
     # Filter legacy formatting-only observations before pagination. Raw audit

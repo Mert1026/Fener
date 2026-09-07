@@ -7,6 +7,7 @@ import { Info, Search, RefreshCw } from "lucide-react";
 import { api, isPrivateLocked, type Benchmark } from "@/lib/api";
 import { date } from "@/lib/format";
 import { requestId } from "@/lib/uuid";
+import { SinceDigest } from "@/components/since-digest";
 import {
   Badge,
   Empty,
@@ -104,6 +105,7 @@ export default function BenchmarksPage() {
         title="Comparable model benchmarks."
         description="Fener reads the current Artificial Analysis Intelligence Index cohort directly. Only exact source-published model scores enter the comparison."
       />
+      <SinceDigest scope="models" />
       <section className="panel settings-panel" style={{ marginBottom: 20 }}>
         <div className="panel-header">
           <div>

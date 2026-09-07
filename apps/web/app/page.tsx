@@ -14,6 +14,8 @@ import {
 import { api, type ModelPage, type Overview } from "@/lib/api";
 import { ModelTable } from "@/components/model-table";
 import { EventList } from "@/components/event-list";
+import { SinceDigest } from "@/components/since-digest";
+import { WatchlistPanel } from "@/components/watchlist-panel";
 import {
   Empty,
   ErrorState,
@@ -47,6 +49,7 @@ export default function OverviewPage() {
           </Link>
         }
       />
+      <SinceDigest scope="all" />
       {query.isPending ? (
         <Loading />
       ) : query.error ? (
@@ -133,6 +136,7 @@ export default function OverviewPage() {
                   <Empty>No market events have been observed.</Empty>
                 )}
               </section>
+              <WatchlistPanel />
             </div>
             <div className="section-row">
               <div>

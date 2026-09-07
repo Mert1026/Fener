@@ -5,6 +5,7 @@ import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { api, type ModelPage, type Provider } from "@/lib/api";
 import { ModelTable } from "@/components/model-table";
+import { SinceDigest } from "@/components/since-digest";
 import {
   Empty,
   ErrorState,
@@ -71,6 +72,7 @@ function Explorer() {
           </span>
         }
       />
+      <SinceDigest scope="models" />
       <div className="filters">
         <div className="filter-search">
           <Search size={15} />

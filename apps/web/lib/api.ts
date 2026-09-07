@@ -66,6 +66,16 @@ export type MarketEvent = {
   source: string;
   source_url: string;
 };
+export type WatchlistItem = {
+  model_id: string;
+  model_name: string;
+  identity_status: string;
+  created_at: string;
+};
+export type WatchlistState = {
+  telegram_configured: boolean;
+  items: WatchlistItem[];
+};
 export type Overview = {
   models: number;
   unresolved_models: number;

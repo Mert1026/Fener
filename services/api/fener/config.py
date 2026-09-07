@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     auto_apply_recommendations: bool = False
     fener_personal_features_enabled: bool = False
     zai_api_key: SecretStr = SecretStr("")
+    fener_telegram_bot_token: SecretStr = SecretStr("")
+    fener_telegram_chat_id: str = ""
     fener_zai_research_model: str = "glm-4.7-flash"
     fener_research_daily_limit: int = Field(default=5, ge=1, le=100)
 

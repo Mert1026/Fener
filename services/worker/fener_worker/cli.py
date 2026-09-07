@@ -12,7 +12,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from fener_worker.benchmark_jobs import process_benchmark_refresh
-from fener_worker.jobs import process_queue
+from fener_worker.jobs import notify_watchlist, process_queue
 
 app = typer.Typer(help="Fener ingestion and local administration", no_args_is_help=True)
 
@@ -70,6 +70,13 @@ def worker() -> None:
                 benchmark_work = 0
                 structlog.get_logger().error(
                     "benchmark_refresh_failed", error_type=type(error).__name__
+                )
+            try:
+                notify_watchlist(session, settings())
+            except Exception as error:
+                session.rollback()
+                structlog.get_logger().error(
+                    "watchlist_notify_failed", error_type=type(error).__name__
                 )
             for source in session.scalars(
                 select(Source).where(Source.enabled.is_(True), Source.id.in_(SOURCES))

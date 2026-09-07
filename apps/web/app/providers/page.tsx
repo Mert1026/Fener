@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowUpRight, Search } from "lucide-react";
 import { api, type Provider } from "@/lib/api";
+import { SinceDigest } from "@/components/since-digest";
 import {
   Badge,
   Empty,
@@ -30,6 +31,7 @@ export default function ProvidersPage() {
         title="Providers & platforms"
         description="Where models are served. Access platforms stay separate from underlying inference providers."
       />
+      <SinceDigest scope="deployments" />
       <div className="filters">
         <div className="filter-search">
           <Search size={15} />

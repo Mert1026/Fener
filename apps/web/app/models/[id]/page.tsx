@@ -2,13 +2,14 @@
 import { use, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, ArrowLeftRight, Info } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, ArrowLeftRight, Info, Star } from "lucide-react";
 import {
   api,
   type ModelDetail,
   type MarketEvent,
   type Benchmark,
+  type WatchlistState,
 } from "@/lib/api";
 import { date, humanize, tokens } from "@/lib/format";
 import { useCompare } from "@/lib/compare-store";
@@ -60,6 +61,30 @@ export default function ModelDetailPage({
     queryFn: () => api<MarketEvent[]>(`market-events?entity_id=${id}`),
     enabled: tab === "History",
   });
+  const client = useQueryClient();
+  const watchlist = useQuery({
+    queryKey: ["watchlist"],
+    queryFn: () => api<WatchlistState>("watchlist"),
+    retry: false,
+    staleTime: 30_000,
+  });
+  const invalidateWatchlist = () =>
+    client.invalidateQueries({ queryKey: ["watchlist"] });
+  const watch = useMutation({
+    mutationFn: () =>
+      api("watchlist", {
+        method: "POST",
+        body: JSON.stringify({ model_id: id }),
+      }),
+    onSuccess: invalidateWatchlist,
+  });
+  const unwatch = useMutation({
+    mutationFn: () =>
+      api(`watchlist/${encodeURIComponent(id)}`, { method: "DELETE" }),
+    onSuccess: invalidateWatchlist,
+  });
+  const watched =
+    watchlist.data?.items.some((item) => item.model_id === id) ?? false;
   if (query.isPending) return <Loading />;
   if (query.error)
     return <ErrorState error={query.error} retry={query.refetch} />;
@@ -101,15 +126,27 @@ export default function ModelDetailPage({
             </div>
           </div>
         </div>
-        <button
-          className="button"
-          onClick={() => toggle({ id: model.id, name: model.name })}
-        >
-          <ArrowLeftRight size={13} />
-          {selected.some((row) => row.id === id)
-            ? "Remove from compare"
-            : "Add to comparison"}
-        </button>
+        <div className="detail-actions">
+          <button
+            className="button"
+            onClick={() => toggle({ id: model.id, name: model.name })}
+          >
+            <ArrowLeftRight size={13} />
+            {selected.some((row) => row.id === id)
+              ? "Remove from compare"
+              : "Add to comparison"}
+          </button>
+          {watchlist.data && (
+            <button
+              className="button"
+              onClick={() => (watched ? unwatch.mutate() : watch.mutate())}
+              disabled={watch.isPending || unwatch.isPending}
+            >
+              <Star size={13} />
+              {watched ? "Unwatch model" : "Watch price changes"}
+            </button>
+          )}
+        </div>
       </div>
       {model.facts.description && (
         <p className="detail-description">

@@ -178,6 +178,41 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/watchlist": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Watchlist */
+    get: operations["watchlist_api_v1_watchlist_get"];
+    put?: never;
+    /** Watch Add */
+    post: operations["watch_add_api_v1_watchlist_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/watchlist/{model_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Watch Remove */
+    delete: operations["watch_remove_api_v1_watchlist__model_id__delete"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/research": {
     parameters: {
       query?: never;
@@ -936,6 +971,11 @@ export interface components {
       /** Context */
       ctx?: Record<string, never>;
     };
+    /** WatchlistAdd */
+    WatchlistAdd: {
+      /** Model Id */
+      model_id: string;
+    };
     /** Workload */
     Workload: {
       /**
@@ -1412,6 +1452,96 @@ export interface operations {
       };
     };
   };
+  watchlist_api_v1_watchlist_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+    };
+  };
+  watch_add_api_v1_watchlist_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["WatchlistAdd"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: string;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  watch_remove_api_v1_watchlist__model_id__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        model_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: string;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   research_home_api_v1_research_get: {
     parameters: {
       query?: never;
@@ -1864,6 +1994,7 @@ export interface operations {
       query?: {
         event_type?: string | null;
         entity_id?: string | null;
+        since?: string | null;
         offset?: number;
         limit?: number;
       };

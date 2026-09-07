@@ -6,6 +6,7 @@ import Decimal from "decimal.js";
 import { ArrowRight, Calculator, X } from "lucide-react";
 import { api, type Deployment, type ModelDetail } from "@/lib/api";
 import { useCompare } from "@/lib/compare-store";
+import { SinceDigest } from "@/components/since-digest";
 import { money, tokens } from "@/lib/format";
 import {
   Badge,
@@ -87,6 +88,7 @@ export default function ComparePage() {
           </Link>
         }
       />
+      <SinceDigest scope="models" />
       {selected.length < 2 ? (
         <Empty title="Start with two models">
           Select models in the{" "}
