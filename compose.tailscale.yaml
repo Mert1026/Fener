@@ -29,6 +29,10 @@ services:
       TS_USERSPACE: "false"
     volumes:
       - tailscale_state:/var/lib/tailscale
+      # Lets tailscaled load netfilter modules so its local firewall rules
+      # (ts-input) install cleanly; without it the container logs iptables
+      # warnings and relies on tailnet-side ACL enforcement only.
+      - /lib/modules:/lib/modules:ro
     devices:
       - /dev/net/tun:/dev/net/tun
     cap_add:
