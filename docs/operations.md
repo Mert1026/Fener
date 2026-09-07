@@ -1,5 +1,44 @@
 # Operations
 
+## Home server (Docker Compose + Tailscale)
+
+The full stack runs as containers: PostgreSQL, API, migration job, worker and web UI. Data updates itself on a schedule and can be refreshed manually at any time.
+
+1. Generate a Tailscale auth key (admin console, Settings, Keys) and put the deployment values into the ignored `.env`:
+
+   ```sh
+   FENER_SYNC_INTERVAL_SECONDS=18000   # automatic catalog sync every 5 hours
+   TS_AUTHKEY=tskey-auth-...           # registers the stack as device "fener"
+   TS_HOSTNAME=fener
+   FENER_WEB_ORIGIN=http://fener:3000  # the exact URL you will open in the browser
+   ```
+
+   With MagicDNS enabled, open `http://fener:3000` from any device on your tailnet. `FENER_WEB_ORIGIN` must match that URL exactly; state-changing requests from any other origin are rejected.
+
+2. Apply migrations, then start the stack:
+
+   ```sh
+   docker compose -f compose.yaml -f compose.app.yaml -f compose.tailscale.yaml run --rm migrate
+   docker compose -f compose.yaml -f compose.app.yaml -f compose.tailscale.yaml up -d
+   ```
+
+   The `web` container publishes **no host port**: it shares the Tailscale container's network namespace, so the UI is reachable only through your tailnet. Unlock Settings with your local `FENER_ADMIN_KEY` to use private pages.
+
+3. Data updates happen two ways:
+
+   - **Automatic:** the worker polls its schedule every minute and syncs each source every `FENER_SYNC_INTERVAL_SECONDS` (18000 = 5 hours). A failed source never blocks the others.
+   - **Manual:** unlock the app, open **Data health**, and press **Queue sync** on a source. The request is durably queued and the worker processes it on its next pass.
+
+4. Optional HTTPS inside the tailnet:
+
+   ```sh
+   docker exec fener-tailscale tailscale serve --bg --https=443 http://localhost:3000
+   ```
+
+   Then open `https://fener.<your-tailnet>.ts.net` and set `FENER_WEB_ORIGIN=https://fener.<your-tailnet>.ts.net` (restart the stack afterwards). Session cookies automatically gain the `secure` flag on HTTPS origins.
+
+The API container binds `127.0.0.1:8000` on the host for local diagnostics only; browsers use the same-origin proxy in the web app. Backups and restore work unchanged (`python scripts/manage.py backup --docker` against the `db` service).
+
 ## Health and recovery
 
 `GET /healthz` reports process health. `GET /readyz` checks the database migration table. Detailed source status, recent runs, errors and conflicts are available in authenticated Data Health. Worker logs use structured JSON with source and ingestion-run identifiers; credentials are not included. An incomplete or invalid source response preserves raw snapshots and rolls back normalized writes.

@@ -47,7 +47,7 @@ The build session exercised these flows interactively in the in-app browser. The
 
 ## Optional containers
 
-The default Compose file runs PostgreSQL only. `compose.app.yaml` adds API, migration and worker containers; web remains a local Next.js process. Run migrations first:
+The default Compose file runs PostgreSQL only. `compose.app.yaml` adds API, migration, worker and web containers; `compose.tailscale.yaml` additionally exposes the web UI only to your tailnet (see [operations](operations.md) for the home-server runbook). Run migrations first:
 
 ```sh
 docker compose -f compose.yaml -f compose.app.yaml run --rm migrate
