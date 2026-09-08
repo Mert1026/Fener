@@ -250,8 +250,8 @@ export function PriceHistoryChart({
       aria: { enabled: true },
       color:
         resolvedTheme === "light"
-          ? ["#002d72", "#887500", "#2869b4", "#547899", "#796831", "#425481"]
-          : ["#ffed00", "#70a6ec", "#f4cf72", "#a5bfdf", "#c7c35d", "#4e89d9"],
+          ? ["#002d72", "#0e7fb0", "#0f9d6a", "#a4681a", "#6b4fc9", "#40639c"]
+          : ["#ffd60a", "#4cc9f0", "#3fd68f", "#ff9e64", "#b39cf0", "#5f8fe8"],
       tooltip: { trigger: "axis", renderMode: "richText" },
       legend: { show: false },
       grid: { left: 60, right: 25, top: 25, bottom: 40 },
