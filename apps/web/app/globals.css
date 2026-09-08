@@ -3976,3 +3976,30 @@ main[data-page="settings"] .settings-panel {
     grid-template-columns: 1fr;
   }
 }
+
+.provider-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: inherit;
+  transition: color var(--motion-fast, 120ms) ease;
+}
+
+.provider-link:hover {
+  color: var(--aqua);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.provider-link svg {
+  opacity: 0.6;
+  transition: opacity var(--motion-fast, 120ms) ease;
+}
+
+.provider-link:hover svg {
+  opacity: 1;
+}
+
+.muted-link {
+  color: inherit;
+}

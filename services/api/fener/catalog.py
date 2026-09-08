@@ -68,6 +68,15 @@ def deployment_views(
         .limit(limit)
     ).all()
     facts = facts_for(session, "deployment", [row.id for row, _, _ in rows])
+    provider_facts = facts_for(
+        session, "provider", sorted({row.access_provider_id for row, _, _ in rows})
+    )
+
+    def provider_url(access_provider: str) -> str | None:
+        fact = provider_facts.get(access_provider, {}).get("documentation_url")
+        value = fact.value if fact else None
+        return value if isinstance(value, str) and value.startswith("http") else None
+
     return [
         DeploymentView(
             id=row.id,
@@ -75,6 +84,7 @@ def deployment_views(
             model_name=name,
             identity_status=identity_status,
             access_provider=row.access_provider_id,
+            provider_url=provider_url(row.access_provider_id),
             upstream_provider=row.upstream_provider_id,
             api_model_id=row.api_model_id,
             variant=row.variant,

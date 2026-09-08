@@ -2094,6 +2094,17 @@
             "type": "string",
             "title": "Access Provider"
           },
+          "provider_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Url"
+          },
           "upstream_provider": {
             "anyOf": [
               {

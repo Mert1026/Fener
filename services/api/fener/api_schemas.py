@@ -46,6 +46,7 @@ class DeploymentView(BaseModel):
     model_name: str
     identity_status: str = "unresolved"
     access_provider: str
+    provider_url: str | None = None
     upstream_provider: str | None
     api_model_id: str
     variant: str
