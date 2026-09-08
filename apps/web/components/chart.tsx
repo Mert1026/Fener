@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as echarts from "echarts";
 import { RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -223,6 +223,11 @@ export function ContextCostChart({ models }: { models: Model[] }) {
   );
 }
 
+const SERIES_PALETTE = {
+  light: ["#002d72", "#0e7fb0", "#0f9d6a", "#a4681a", "#6b4fc9", "#40639c"],
+  dark: ["#ffd60a", "#4cc9f0", "#3fd68f", "#ff9e64", "#b39cf0", "#5f8fe8"],
+};
+
 export function PriceHistoryChart({
   rows,
 }: {
@@ -237,24 +242,24 @@ export function PriceHistoryChart({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const { resolvedTheme } = useTheme();
-  useEffect(() => {
-    if (!ref.current) return;
-    const chart = echarts.init(ref.current);
+  const series = useMemo(() => {
     const groups = new Map<string, typeof rows>();
-    const styles = getComputedStyle(ref.current);
-    const foreground = styles.getPropertyValue("--muted").trim();
-    const border = styles.getPropertyValue("--border").trim();
     for (const row of rows) {
       const key = `${row.provider} · ${row.metric} · ${row.source} · ${row.deployment_id.slice(0, 5)}`;
       groups.set(key, [...(groups.get(key) ?? []), row]);
     }
+    return [...groups].slice(0, 12);
+  }, [rows]);
+  useEffect(() => {
+    if (!ref.current) return;
+    const chart = echarts.init(ref.current);
+    const styles = getComputedStyle(ref.current);
+    const foreground = styles.getPropertyValue("--muted").trim();
+    const border = styles.getPropertyValue("--border").trim();
     chart.setOption({
       animation: false,
       aria: { enabled: true },
-      color:
-        resolvedTheme === "light"
-          ? ["#002d72", "#0e7fb0", "#0f9d6a", "#a4681a", "#6b4fc9", "#40639c"]
-          : ["#ffd60a", "#4cc9f0", "#3fd68f", "#ff9e64", "#b39cf0", "#5f8fe8"],
+      color: SERIES_PALETTE[resolvedTheme === "light" ? "light" : "dark"],
       tooltip: { trigger: "axis", renderMode: "richText" },
       legend: { show: false },
       grid: { left: 60, right: 25, top: 25, bottom: 40 },
@@ -272,7 +277,7 @@ export function PriceHistoryChart({
         },
         axisLabel: { color: foreground },
       },
-      series: [...groups].slice(0, 12).map(([name, values]) => ({
+      series: series.map(([name, values]) => ({
         name,
         type: "line",
         step: "end",
@@ -288,13 +293,29 @@ export function PriceHistoryChart({
       observer.disconnect();
       chart.dispose();
     };
-  }, [rows, resolvedTheme]);
+  }, [series, resolvedTheme]);
+  const palette = SERIES_PALETTE[resolvedTheme === "light" ? "light" : "dark"];
   return (
-    <div
-      ref={ref}
-      className="chart"
-      role="img"
-      aria-label="Observed historical prices, separated by deployment, metric, and source. Single observations appear as points."
-    />
+    <>
+      <div
+        ref={ref}
+        className="chart"
+        role="img"
+        aria-label="Observed historical prices, separated by deployment, metric, and source. Single observations appear as points."
+      />
+      {series.length > 1 && (
+        <div className="chart-legend">
+          {series.map(([name], index) => (
+            <span className="chart-legend-item" key={name} title={name}>
+              <span
+                className="chart-legend-dot"
+                style={{ background: palette[index % palette.length] }}
+              />
+              {name.split(" · ").slice(0, 3).join(" · ").replace(/_/g, " ")}
+            </span>
+          ))}
+        </div>
+      )}
+    </>
   );
 }
