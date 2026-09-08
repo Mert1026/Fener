@@ -6,6 +6,7 @@ import Decimal from "decimal.js";
 import { ArrowRight, Calculator, X } from "lucide-react";
 import { api, type Deployment, type ModelDetail } from "@/lib/api";
 import { useCompare } from "@/lib/compare-store";
+import { SinceDigest } from "@/components/since-digest";
 import { money, tokens } from "@/lib/format";
 import {
   Badge,
@@ -87,6 +88,7 @@ export default function ComparePage() {
           </Link>
         }
       />
+      <SinceDigest scope="models" />
       {selected.length < 2 ? (
         <Empty title="Start with two models">
           Select models in the{" "}
@@ -260,12 +262,18 @@ export default function ComparePage() {
               ))}
               <button
                 className="button primary"
-                disabled={cost.isPending}
+                disabled={cost.isPending || !deployments.some(Boolean)}
                 onClick={() => cost.mutate()}
               >
                 {cost.isPending ? "Calculating…" : "Calculate costs"}
               </button>
             </div>
+            {!deployments.some(Boolean) && (
+              <p className="chart-caption" role="status">
+                No serving deployments are available for these models. Choose
+                models with current provider listings to estimate a workload.
+              </p>
+            )}
             {cost.error && (
               <div className="panel-content">
                 <ErrorState error={cost.error} retry={() => cost.mutate()} />

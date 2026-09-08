@@ -297,3 +297,20 @@ class RecommendationRun(Base):
     algorithm_version: Mapped[str] = mapped_column(String(40))
     request: Mapped[dict[str, Any]] = mapped_column(JSON)
     response: Mapped[dict[str, Any]] = mapped_column(JSON)
+
+
+class WatchlistItem(Base):
+    """A model whose price changes the operator wants to be notified about."""
+
+    __tablename__ = "watchlist_items"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    model_id: Mapped[str] = mapped_column(ForeignKey("models.id"), unique=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class NotificationCursor(Base):
+    """Per-channel delivery watermark so notifications are sent exactly once."""
+
+    __tablename__ = "notification_cursors"
+    channel: Mapped[str] = mapped_column(String(40), primary_key=True)
+    last_notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

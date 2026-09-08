@@ -45,6 +45,7 @@ export function Empty({
 }) {
   return (
     <div className="empty">
+      <span className="empty-beacon" aria-hidden />
       <Database size={28} />
       <h3>{title}</h3>
       <p>{children}</p>

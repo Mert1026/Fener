@@ -1,5 +1,6 @@
 import time
 from collections import defaultdict, deque
+from datetime import datetime
 from decimal import Decimal
 from functools import lru_cache
 from typing import Annotated, Any, Literal
@@ -77,7 +78,14 @@ async def request_context(request: Request, call_next: Any) -> Any:
         key = request.client.host if request.client else "unknown"
         now = time.monotonic()
         if key not in windows and len(windows) >= 4096:
-            windows.clear()
+            # Evict fully-expired buckets first. A blanket clear() would grant
+            # every active client a fresh rate budget, so an IP-flooding
+            # attacker could reset the operator's own limit at will.
+            expired = [k for k, w in windows.items() if not w or w[0] <= now - 60]
+            for stale_key in expired:
+                del windows[stale_key]
+            if len(windows) >= 4096:
+                windows.clear()
         window = windows[key]
         while window and window[0] <= now - 60:
             window.popleft()
@@ -300,6 +308,7 @@ def market_events(
     session: DB,
     event_type: str | None = None,
     entity_id: str | None = None,
+    since: datetime | None = None,
     offset: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
 ) -> list[dict[str, Any]]:
@@ -316,6 +325,8 @@ def market_events(
         query = query.where(MarketEvent.event_type == event_type)
     if entity_id:
         query = query.where(MarketEvent.entity_id == entity_id)
+    if since:
+        query = query.where(MarketEvent.detected_at >= since)
     material = []
     skipped = 0
     # Filter legacy formatting-only observations before pagination. Raw audit

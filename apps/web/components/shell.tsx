@@ -26,6 +26,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { api, type ModelPage } from "@/lib/api";
 import { useCompare } from "@/lib/compare-store";
+import { RefreshCountdown } from "./refresh-countdown";
 
 const navigation = [
   {
@@ -174,7 +175,17 @@ export function Shell({ children }: { children: React.ReactNode }) {
       <a className="skip-link" href="#main">
         Skip to content
       </a>
-      <aside className={`sidebar ${mobile ? "is-open" : ""}`}>
+      {mobile && (
+        <button
+          className="navigation-scrim"
+          aria-label="Close navigation"
+          onClick={() => setMobile(false)}
+        />
+      )}
+      <aside
+        id="workspace-navigation"
+        className={`sidebar ${mobile ? "is-open" : ""}`}
+      >
         <Link className="brand" href="/">
           <span className="brand-mark">
             <span />
@@ -199,6 +210,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.href}
                   onClick={() => setMobile(false)}
+                  aria-current={
+                    current?.href === item.href ? "page" : undefined
+                  }
                   className={`nav-item ${current?.href === item.href ? "active" : ""}`}
                   href={item.href}
                 >
@@ -224,6 +238,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <button
               className="icon-button mobile-menu"
               aria-label="Toggle navigation"
+              aria-expanded={mobile}
+              aria-controls="workspace-navigation"
               onClick={() => setMobile(!mobile)}
             >
               <Menu size={19} />
@@ -233,6 +249,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <strong>{current?.name ?? "Evidence"}</strong>
           </div>
           <div className="topbar-actions">
+            <RefreshCountdown />
             <span className="live-label">
               <span className="status-dot" /> SOURCE-BACKED DATA
             </span>
@@ -257,7 +274,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </a>
           </div>
         </div>
-        <main id="main">{children}</main>
+        <main
+          id="main"
+          data-page={
+            current?.href === "/" ? "overview" : current?.href.slice(1)
+          }
+        >
+          {children}
+        </main>
       </div>
       {selected.length > 0 && pathname !== "/compare" && (
         <div className="compare-tray">

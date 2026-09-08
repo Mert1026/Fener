@@ -17,6 +17,7 @@ const allowed = new Set([
   "research",
   "internal",
   "analytics",
+  "watchlist",
 ]);
 async function proxy(
   request: NextRequest,
@@ -83,3 +84,4 @@ async function proxy(
 }
 export const GET = proxy;
 export const POST = proxy;
+export const DELETE = proxy;

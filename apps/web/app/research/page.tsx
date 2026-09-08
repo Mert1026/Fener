@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { api, isPrivateLocked } from "@/lib/api";
 import { date, humanize } from "@/lib/format";
+import { requestId } from "@/lib/uuid";
 import { PrivateGate } from "@/components/private-gate";
 import { Badge, Empty, ErrorState, Loading, PageHeader } from "@/components/ui";
 
@@ -57,7 +58,7 @@ export default function ResearchPage() {
       api<Run>("research", {
         method: "POST",
         body: JSON.stringify({
-          request_id: crypto.randomUUID(),
+          request_id: requestId(),
           provider: query.data?.provider,
           model: query.data?.model,
           query: question.trim(),

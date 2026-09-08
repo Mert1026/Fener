@@ -92,6 +92,58 @@ def test_idempotence_and_price_reversion(session):
     assert session.scalar(select(func.count()).select_from(SourceRecord)) == 2
 
 
+def gemini_entry(external_id: str, amount: str, max_input: int) -> NormalizedRecord:
+    """The real LiteLLM shape: bare and namespaced keys for one Gemini model."""
+    return NormalizedRecord(
+        external_id=external_id,
+        name="gemini-exp-1206",
+        canonical_id="gemini/gemini-exp-1206",
+        provider_id="gemini",
+        provider_name="gemini",
+        api_id="gemini-exp-1206",
+        deployment_facts={"max_input": max_input},
+        prices=[NativePrice(metric="output_tokens", amount=amount, quantity=1)],
+        raw={},
+    )
+
+
+def test_duplicate_entries_within_one_sync_do_not_flip_flop(session):
+    """LiteLLM lists `gemini-exp-1206` and `gemini/gemini-exp-1206`; both
+    resolve to one deployment. The namespaced entry must win deterministically
+    and the conflicting entry must not emit alternating change events."""
+    setup_source(session, "litellm")
+    prefixed = gemini_entry("gemini/gemini-exp-1206", "0", 2097152)
+    bare = gemini_entry("gemini-exp-1206", "2.5", 1048576)
+
+    writer = CatalogWriter(session, "litellm", datetime(2026, 1, 1, tzinfo=UTC))
+    for record in (prefixed, bare):
+        writer.persist(record, "litellm", "https://example.com")
+    session.commit()
+
+    prices = session.scalars(select(Price)).all()
+    assert len(prices) == 1
+    assert prices[0].amount == Decimal("0")
+    facts = session.scalars(select(Fact).where(Fact.field == "max_input")).all()
+    assert len(facts) == 1
+    assert facts[0].value == 2097152
+    # Discovery events only: one new_model, one new_deployment.
+    first_sync_events = session.scalar(select(func.count()).select_from(MarketEvent))
+    assert first_sync_events == 2
+
+    # A later sync with the same two entries: stable, no new observations.
+    later = CatalogWriter(session, "litellm", datetime(2026, 1, 1, 6, tzinfo=UTC))
+    for record in (prefixed, bare):
+        later.persist(record, "litellm", "https://example.com")
+    session.commit()
+
+    assert session.scalar(select(func.count()).select_from(Price)) == 1
+    assert (
+        session.scalar(select(func.count()).select_from(Fact).where(Fact.field == "max_input"))
+        == 1
+    )
+    assert session.scalar(select(func.count()).select_from(MarketEvent)) == first_sync_events
+
+
 def test_conflicting_sources_do_not_destroy_history(session):
     setup_source(session)
     setup_source(session, "litellm")

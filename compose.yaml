@@ -1,6 +1,7 @@
 services:
   db:
     image: postgres:17.9-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_DB: fener
       POSTGRES_USER: fener

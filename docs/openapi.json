@@ -8,7 +8,9 @@
   "paths": {
     "/api/v1/harnesses": {
       "get": {
-        "tags": ["Private intelligence"],
+        "tags": [
+          "Private intelligence"
+        ],
         "summary": "Harnesses",
         "operationId": "harnesses_api_v1_harnesses_get",
         "responses": {
@@ -35,7 +37,9 @@
         ]
       },
       "post": {
-        "tags": ["Private intelligence"],
+        "tags": [
+          "Private intelligence"
+        ],
         "summary": "Create Harness",
         "operationId": "create_harness_api_v1_harnesses_post",
         "requestBody": {
@@ -83,7 +87,9 @@
     },
     "/api/v1/harnesses/roles/{role_id}/policies": {
       "post": {
-        "tags": ["Private intelligence"],
+        "tags": [
+          "Private intelligence"
+        ],
         "summary": "Create Policy",
         "operationId": "create_policy_api_v1_harnesses_roles__role_id__policies_post",
         "security": [
@@ -138,7 +144,9 @@
         }
       },
       "get": {
-        "tags": ["Private intelligence"],
+        "tags": [
+          "Private intelligence"
+        ],
         "summary": "Role Policies",
         "operationId": "role_policies_api_v1_harnesses_roles__role_id__policies_get",
         "security": [
@@ -188,7 +196,9 @@
     },
     "/api/v1/harnesses/policies/{policy_id}/approve": {
       "post": {
-        "tags": ["Private intelligence"],
+        "tags": [
+          "Private intelligence"
+        ],
         "summary": "Approve Policy",
         "operationId": "approve_policy_api_v1_harnesses_policies__policy_id__approve_post",
         "security": [
@@ -247,7 +257,9 @@
     },
     "/api/v1/telemetry/runs": {
       "post": {
-        "tags": ["Private intelligence"],
+        "tags": [
+          "Private intelligence"
+        ],
         "summary": "Telemetry",
         "operationId": "telemetry_api_v1_telemetry_runs_post",
         "security": [
@@ -291,7 +303,9 @@
         }
       },
       "get": {
-        "tags": ["Private intelligence"],
+        "tags": [
+          "Private intelligence"
+        ],
         "summary": "Telemetry Runs",
         "operationId": "telemetry_runs_api_v1_telemetry_runs_get",
         "security": [
@@ -344,7 +358,9 @@
     },
     "/api/v1/evaluations/suites": {
       "post": {
-        "tags": ["Private intelligence"],
+        "tags": [
+          "Private intelligence"
+        ],
         "summary": "Create Suite",
         "operationId": "create_suite_api_v1_evaluations_suites_post",
         "requestBody": {
@@ -392,7 +408,9 @@
     },
     "/api/v1/evaluations": {
       "get": {
-        "tags": ["Private intelligence"],
+        "tags": [
+          "Private intelligence"
+        ],
         "summary": "Evaluations",
         "operationId": "evaluations_api_v1_evaluations_get",
         "responses": {
@@ -418,7 +436,9 @@
     },
     "/api/v1/evaluations/runs": {
       "post": {
-        "tags": ["Private intelligence"],
+        "tags": [
+          "Private intelligence"
+        ],
         "summary": "Evaluate",
         "operationId": "evaluate_api_v1_evaluations_runs_post",
         "requestBody": {
@@ -466,7 +486,9 @@
     },
     "/api/v1/internal/sync": {
       "get": {
-        "tags": ["Private intelligence"],
+        "tags": [
+          "Private intelligence"
+        ],
         "summary": "Sync Requests",
         "operationId": "sync_requests_api_v1_internal_sync_get",
         "responses": {
@@ -493,7 +515,9 @@
         ]
       },
       "post": {
-        "tags": ["Private intelligence"],
+        "tags": [
+          "Private intelligence"
+        ],
         "summary": "Enqueue Sync",
         "operationId": "enqueue_sync_api_v1_internal_sync_post",
         "requestBody": {
@@ -541,7 +565,9 @@
     },
     "/api/v1/internal/deployments/{deployment_id}/identity": {
       "post": {
-        "tags": ["Private intelligence"],
+        "tags": [
+          "Private intelligence"
+        ],
         "summary": "Resolve Identity",
         "operationId": "resolve_identity_api_v1_internal_deployments__deployment_id__identity_post",
         "security": [
@@ -600,7 +626,9 @@
     },
     "/api/v1/internal/identity-overrides": {
       "get": {
-        "tags": ["Private intelligence"],
+        "tags": [
+          "Private intelligence"
+        ],
         "summary": "Identity Overrides",
         "operationId": "identity_overrides_api_v1_internal_identity_overrides_get",
         "responses": {
@@ -627,9 +655,138 @@
         ]
       }
     },
+    "/api/v1/watchlist": {
+      "get": {
+        "tags": [
+          "Private intelligence"
+        ],
+        "summary": "Watchlist",
+        "operationId": "watchlist_api_v1_watchlist_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Watchlist Api V1 Watchlist Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Private intelligence"
+        ],
+        "summary": "Watch Add",
+        "operationId": "watch_add_api_v1_watchlist_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WatchlistAdd"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Watch Add Api V1 Watchlist Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/watchlist/{model_id}": {
+      "delete": {
+        "tags": [
+          "Private intelligence"
+        ],
+        "summary": "Watch Remove",
+        "operationId": "watch_remove_api_v1_watchlist__model_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "model_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Model Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Watch Remove Api V1 Watchlist  Model Id  Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/research": {
       "get": {
-        "tags": ["Manual research"],
+        "tags": [
+          "Manual research"
+        ],
         "summary": "Research Home",
         "operationId": "research_home_api_v1_research_get",
         "responses": {
@@ -653,7 +810,9 @@
         ]
       },
       "post": {
-        "tags": ["Manual research"],
+        "tags": [
+          "Manual research"
+        ],
         "summary": "Research Run",
         "operationId": "research_run_api_v1_research_post",
         "requestBody": {
@@ -699,7 +858,9 @@
     },
     "/api/v1/benchmark-refresh": {
       "get": {
-        "tags": ["Benchmark research"],
+        "tags": [
+          "Benchmark research"
+        ],
         "summary": "Get Refresh",
         "operationId": "get_refresh_api_v1_benchmark_refresh_get",
         "responses": {
@@ -723,7 +884,9 @@
         ]
       },
       "post": {
-        "tags": ["Benchmark research"],
+        "tags": [
+          "Benchmark research"
+        ],
         "summary": "Start Refresh",
         "operationId": "start_refresh_api_v1_benchmark_refresh_post",
         "requestBody": {
@@ -923,7 +1086,11 @@
             "in": "query",
             "required": false,
             "schema": {
-              "enum": ["name", "context", "released"],
+              "enum": [
+                "name",
+                "context",
+                "released"
+              ],
               "type": "string",
               "default": "name",
               "title": "Sort"
@@ -1448,6 +1615,23 @@
             }
           },
           {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          },
+          {
             "name": "offset",
             "in": "query",
             "required": false,
@@ -1832,14 +2016,22 @@
           },
           "scorer": {
             "type": "string",
-            "enum": ["exact_match", "contains", "human"],
+            "enum": [
+              "exact_match",
+              "contains",
+              "human"
+            ],
             "title": "Scorer",
             "default": "exact_match"
           }
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["name", "input", "reference"],
+        "required": [
+          "name",
+          "input",
+          "reference"
+        ],
         "title": "CaseInput"
       },
       "CaseResult": {
@@ -1873,7 +2065,10 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["case_id", "output"],
+        "required": [
+          "case_id",
+          "output"
+        ],
         "title": "CaseResult"
       },
       "DeploymentView": {
@@ -2068,7 +2263,9 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["name"],
+        "required": [
+          "name"
+        ],
         "title": "HarnessInput"
       },
       "IdentityInput": {
@@ -2093,7 +2290,11 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["target_model_id", "evidence_url", "note"],
+        "required": [
+          "target_model_id",
+          "evidence_url",
+          "note"
+        ],
         "title": "IdentityInput"
       },
       "ModelDetail": {
@@ -2118,7 +2319,11 @@
           }
         },
         "type": "object",
-        "required": ["model", "deployments", "benchmarks"],
+        "required": [
+          "model",
+          "deployments",
+          "benchmarks"
+        ],
         "title": "ModelDetail"
       },
       "ModelPage": {
@@ -2144,7 +2349,12 @@
           }
         },
         "type": "object",
-        "required": ["items", "total", "offset", "limit"],
+        "required": [
+          "items",
+          "total",
+          "offset",
+          "limit"
+        ],
         "title": "ModelPage"
       },
       "ModelView": {
@@ -2315,7 +2525,11 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["approve", "deployment_id", "note"],
+        "required": [
+          "approve",
+          "deployment_id",
+          "note"
+        ],
         "title": "PolicyApproval"
       },
       "ProviderView": {
@@ -2345,7 +2559,13 @@
           }
         },
         "type": "object",
-        "required": ["id", "name", "kind", "deployment_count", "facts"],
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "deployment_count",
+          "facts"
+        ],
         "title": "ProviderView"
       },
       "RecommendationInput": {
@@ -2464,7 +2684,10 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["request_id", "acknowledge_cost"],
+        "required": [
+          "request_id",
+          "acknowledge_cost"
+        ],
         "title": "RefreshInput"
       },
       "ResearchInput": {
@@ -2540,7 +2763,11 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["name", "version", "cases"],
+        "required": [
+          "name",
+          "version",
+          "cases"
+        ],
         "title": "SuiteInput"
       },
       "SyncInput": {
@@ -2552,7 +2779,9 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["source_id"],
+        "required": [
+          "source_id"
+        ],
         "title": "SyncInput"
       },
       "TelemetryInput": {
@@ -2715,8 +2944,28 @@
           }
         },
         "type": "object",
-        "required": ["loc", "msg", "type"],
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
         "title": "ValidationError"
+      },
+      "WatchlistAdd": {
+        "properties": {
+          "model_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Model Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "model_id"
+        ],
+        "title": "WatchlistAdd"
       },
       "Workload": {
         "properties": {

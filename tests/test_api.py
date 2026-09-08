@@ -49,3 +49,21 @@ def test_search_includes_fresh_unresolved_discoveries(client):
     result = client.get("/api/v1/models?q=gpt-6").json()
     assert result["total"] == 1
     assert result["items"][0]["identity_status"] == "unresolved"
+
+
+def test_rate_limit_eviction_preserves_active_clients(client):
+    import time
+    from collections import deque
+
+    from fener.api import windows
+
+    windows.clear()
+    now = time.monotonic()
+    for index in range(4095):
+        windows[f"stale-{index}"] = deque([now - 120])
+    # One client with a live, unexpired rate budget at the eviction threshold.
+    windows["active-peer"] = deque([now - 1])
+    response = client.post("/api/v1/recommendations/preview", json={})
+    assert response.status_code == 200
+    assert "active-peer" in windows
+    windows.clear()

@@ -1,9 +1,11 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as echarts from "echarts";
 import { RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { money, date } from "@/lib/format";
 import type { Model } from "@/lib/api";
 
 export function ContextCostChart({ models }: { models: Model[] }) {
@@ -45,18 +47,29 @@ export function ContextCostChart({ models }: { models: Model[] }) {
     const foreground = styles.getPropertyValue("--muted").trim();
     const accent = styles.getPropertyValue("--accent").trim();
     const border = styles.getPropertyValue("--border").trim();
-    const surface = styles.getPropertyValue("--surface").trim();
+    const aqua = styles.getPropertyValue("--aqua").trim();
     const data = models
       .filter(
         (row) => row.input_price_from !== null && row.context_window !== null,
       )
-      .map((row) => ({
-        name: row.name,
-        value: [Number(row.input_price_from), row.context_window! / 1000],
-        id: row.id,
-      }));
+      .map((row) => {
+        const price = Number(row.input_price_from);
+        return {
+          name: row.name,
+          free: price === 0,
+          // The price axis is logarithmic; free models plot at the axis
+          // floor and the aqua dot plus tooltip carry the truth.
+          value: [price > 0 ? price : 0.001, row.context_window! / 1000],
+          ...(price === 0
+            ? { itemStyle: { color: aqua, borderColor: aqua } }
+            : {}),
+          id: row.id,
+        };
+      });
     chart.setOption({
-      animation: false,
+      animation: !window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+      animationDuration: 240,
+      animationDurationUpdate: 180,
       aria: {
         enabled: true,
         decal: { show: true },
@@ -65,53 +78,54 @@ export function ContextCostChart({ models }: { models: Model[] }) {
             "Zoomable scatter chart comparing model context windows with lowest listed input prices. Each dot opens a model. This is not a quality benchmark.",
         },
       },
-      grid: { left: 57, right: 53, top: 28, bottom: 85 },
-      dataZoom: [
-        ...ranges.current.map((range, index) => ({
-          id: range.dataZoomId,
-          type: "slider",
-          ...(index === 0
-            ? { xAxisIndex: 0, bottom: 15, height: 18, left: 57, right: 53 }
-            : { yAxisIndex: 0, right: 13, width: 16, top: 28, bottom: 85 }),
-          start: range.start,
-          end: range.end,
-          filterMode: "none",
-          minSpan: 0.01,
-          showDetail: false,
-          showDataShadow: false,
-          borderColor: border,
-          backgroundColor: surface,
-          fillerColor: resolvedTheme === "light" ? "#002d7226" : "#ffed0026",
-          handleStyle: { color: accent, borderColor: accent },
-          moveHandleStyle: { color: accent },
-          brushSelect: false,
-        })),
-        ...["xAxisIndex", "yAxisIndex"].map((axis) => ({
-          type: "inside",
-          [axis]: 0,
-          filterMode: "none",
-          minSpan: 0.01,
-          zoomOnMouseWheel: true,
-          moveOnMouseMove: true,
-          moveOnMouseWheel: false,
-        })),
-      ],
+      grid: { left: 64, right: 28, top: 30, bottom: 46 },
+      dataZoom: ranges.current.map((range, index) => ({
+        id: range.dataZoomId,
+        type: "inside",
+        ...(index === 0 ? { xAxisIndex: 0 } : { yAxisIndex: 0 }),
+        start: range.start,
+        end: range.end,
+        filterMode: "none",
+        minSpan: 0.01,
+        zoomOnMouseWheel: true,
+        moveOnMouseMove: true,
+        moveOnMouseWheel: false,
+      })),
       tooltip: {
         trigger: "item",
         renderMode: "richText",
+        confine: true,
+        backgroundColor: styles.getPropertyValue("--surface2").trim(),
+        borderColor: border,
+        textStyle: {
+          color: styles.getPropertyValue("--text").trim(),
+          fontSize: 12,
+        },
         formatter: (p: unknown) => {
-          const point = p as { data: { name: string; value: number[] } };
-          return `${point.data.name}\nInput: $${point.data.value[0]} / 1M\nContext: ${point.data.value[1]}K`;
+          const point = p as {
+            data: { name: string; free?: boolean; value: number[] };
+          };
+          return `${point.data.name}\nInput: ${
+            point.data.free ? "free" : `$${point.data.value[0]} / 1M`
+          }\nContext: ${point.data.value[1]}K tokens`;
         },
       },
       xAxis: {
-        min: 0,
+        type: "log",
+        logBase: 10,
+        min: 0.001,
         max: Math.max(1, ...data.map((point) => point.value[0] * 1.05)),
-        name: "INPUT PRICE · USD / 1M",
+        name: "INPUT PRICE · USD / 1M · LOG",
         nameLocation: "middle",
-        nameGap: 31,
-        nameTextStyle: { fontSize: 9, color: foreground },
-        axisLabel: { fontSize: 9, color: foreground },
+        nameGap: 30,
+        nameTextStyle: { fontSize: 10, color: foreground },
+        axisLabel: {
+          fontSize: 11,
+          color: foreground,
+          hideOverlap: true,
+          showMaxLabel: false,
+          formatter: (v: number) => `$${Number(v.toPrecision(3))}`,
+        },
         splitLine: {
           lineStyle: { color: border, type: "dashed" },
         },
@@ -121,9 +135,17 @@ export function ContextCostChart({ models }: { models: Model[] }) {
       yAxis: {
         min: 0,
         max: Math.max(1, ...data.map((point) => point.value[1] * 1.05)),
-        name: "CONTEXT · K TOKENS",
-        nameTextStyle: { fontSize: 8, color: foreground },
-        axisLabel: { fontSize: 9, color: foreground },
+        name: "CONTEXT · TOKENS",
+        nameTextStyle: { fontSize: 10, color: foreground },
+        splitNumber: 4,
+        axisLabel: {
+          fontSize: 11,
+          color: foreground,
+          formatter: (v: number) =>
+            v >= 1000
+              ? `${Number((v / 1000).toPrecision(3))}M`
+              : `${Math.round(v)}K`,
+        },
         splitLine: {
           lineStyle: { color: border, type: "dashed" },
         },
@@ -131,14 +153,16 @@ export function ContextCostChart({ models }: { models: Model[] }) {
       series: [
         {
           type: "scatter",
-          symbolSize: 8,
+          symbolSize: 10,
           itemStyle: {
             color: accent,
-            opacity: 0.75,
+            opacity: 0.8,
             borderColor: accent,
             borderWidth: 1,
+            shadowBlur: 0,
+            shadowColor: accent,
           },
-          emphasis: { scale: 1.5, itemStyle: { opacity: 1 } },
+          emphasis: { scale: 1.4, itemStyle: { opacity: 1, shadowBlur: 12 } },
           data,
         },
       ],
@@ -205,8 +229,8 @@ export function ContextCostChart({ models }: { models: Model[] }) {
           {zoom}
         </span>
         <p className="chart-help" id="context-cost-help">
-          Scroll or pinch to zoom, drag to pan, or adjust either axis with its
-          slider. Identical values still overlap.
+          Scroll or pinch to zoom · drag to pan · click a dot to open the model.
+          Free models sit on the axis floor in aqua.
         </p>
       </div>
       <div
@@ -216,9 +240,44 @@ export function ContextCostChart({ models }: { models: Model[] }) {
         aria-describedby="context-cost-help"
         aria-label="Zoomable scatter chart comparing model context windows with lowest listed input prices. Each dot opens a model. This is not a quality benchmark."
       />
+      <details className="chart-data">
+        <summary>Explore the plotted models as a table</summary>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Model</th>
+                <th>Context · tokens</th>
+                <th>Input · USD / 1M</th>
+              </tr>
+            </thead>
+            <tbody>
+              {models
+                .filter(
+                  (m) =>
+                    m.input_price_from !== null && m.context_window !== null,
+                )
+                .map((m) => (
+                  <tr key={m.id}>
+                    <td>
+                      <Link href={`/models/${m.id}`}>{m.name}</Link>
+                    </td>
+                    <td>{m.context_window?.toLocaleString()}</td>
+                    <td>{money(m.input_price_from)}</td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
     </div>
   );
 }
+
+const SERIES_PALETTE = {
+  light: ["#002d72", "#0e7fb0", "#0f9d6a", "#a4681a", "#6b4fc9", "#40639c"],
+  dark: ["#ffd60a", "#4cc9f0", "#3fd68f", "#ff9e64", "#b39cf0", "#5f8fe8"],
+};
 
 export function PriceHistoryChart({
   rows,
@@ -234,26 +293,42 @@ export function PriceHistoryChart({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const { resolvedTheme } = useTheme();
+  const [hidden, setHidden] = useState<string[]>([]);
+  const series = useMemo(() => {
+    const groups = new Map<string, typeof rows>();
+    for (const row of rows) {
+      const key = `${row.provider} · ${row.metric} · ${row.source} · ${row.deployment_id}`;
+      groups.set(key, [...(groups.get(key) ?? []), row]);
+    }
+    return [...groups].slice(0, 12);
+  }, [rows]);
   useEffect(() => {
     if (!ref.current) return;
     const chart = echarts.init(ref.current);
-    const groups = new Map<string, typeof rows>();
     const styles = getComputedStyle(ref.current);
     const foreground = styles.getPropertyValue("--muted").trim();
     const border = styles.getPropertyValue("--border").trim();
-    for (const row of rows) {
-      const key = `${row.provider} · ${row.metric} · ${row.source} · ${row.deployment_id.slice(0, 5)}`;
-      groups.set(key, [...(groups.get(key) ?? []), row]);
-    }
     chart.setOption({
-      animation: false,
+      animation: !window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+      animationDuration: 240,
+      animationDurationUpdate: 180,
       aria: { enabled: true },
-      color:
-        resolvedTheme === "light"
-          ? ["#002d72", "#887500", "#2869b4", "#547899", "#796831", "#425481"]
-          : ["#ffed00", "#70a6ec", "#f4cf72", "#a5bfdf", "#c7c35d", "#4e89d9"],
-      tooltip: { trigger: "axis", renderMode: "richText" },
-      legend: { show: false },
+      color: SERIES_PALETTE[resolvedTheme === "light" ? "light" : "dark"],
+      tooltip: {
+        trigger: "axis",
+        renderMode: "richText",
+        confine: true,
+        backgroundColor: styles.getPropertyValue("--surface2").trim(),
+        borderColor: border,
+        textStyle: { color: styles.getPropertyValue("--text").trim() },
+        axisPointer: { type: "cross" },
+      },
+      legend: {
+        show: false,
+        selected: Object.fromEntries(
+          series.map(([name]) => [name, !hidden.includes(name)]),
+        ),
+      },
       grid: { left: 60, right: 25, top: 25, bottom: 40 },
       xAxis: {
         type: "time",
@@ -269,11 +344,13 @@ export function PriceHistoryChart({
         },
         axisLabel: { color: foreground },
       },
-      series: [...groups].slice(0, 12).map(([name, values]) => ({
+      series: series.map(([name, values]) => ({
         name,
         type: "line",
         step: "end",
-        symbolSize: 7,
+        symbolSize: 6,
+        lineStyle: { width: 2.5 },
+        emphasis: { focus: "series" },
         data: values
           .sort((a, b) => a.observed_at.localeCompare(b.observed_at))
           .map((row) => [row.observed_at, Number(row.amount)]),
@@ -285,13 +362,89 @@ export function PriceHistoryChart({
       observer.disconnect();
       chart.dispose();
     };
-  }, [rows, resolvedTheme]);
+  }, [series, resolvedTheme, hidden]);
+  const palette = SERIES_PALETTE[resolvedTheme === "light" ? "light" : "dark"];
   return (
-    <div
-      ref={ref}
-      className="chart"
-      role="img"
-      aria-label="Observed historical prices, separated by deployment, metric, and source. Single observations appear as points."
-    />
+    <>
+      <div
+        ref={ref}
+        className="chart"
+        role="img"
+        aria-label="Observed historical prices, separated by deployment, metric, and source. Single observations appear as points."
+      />
+      <p className="chart-caption">
+        {rows.length} observations ·{" "}
+        {date(
+          [...rows].sort((a, b) =>
+            a.observed_at.localeCompare(b.observed_at),
+          )[0]?.observed_at,
+        )}{" "}
+        –{" "}
+        {date(
+          [...rows].sort((a, b) =>
+            b.observed_at.localeCompare(a.observed_at),
+          )[0]?.observed_at,
+        )}{" "}
+        · Select a legend entry to show or hide a series.
+      </p>
+      {series.length > 0 && (
+        <div className="chart-legend">
+          {series.map(([name], index) => (
+            <button
+              type="button"
+              className="chart-legend-item"
+              key={name}
+              title={name}
+              aria-pressed={!hidden.includes(name)}
+              onClick={() =>
+                setHidden((previous) =>
+                  previous.includes(name)
+                    ? previous.filter((item) => item !== name)
+                    : [...previous, name],
+                )
+              }
+            >
+              <span
+                className="chart-legend-dot"
+                style={{ background: palette[index % palette.length] }}
+              />
+              {name.split(" · ").slice(0, 3).join(" · ").replace(/_/g, " ")} ·{" "}
+              {name.split(" · ")[3].slice(0, 8)}
+            </button>
+          ))}
+        </div>
+      )}
+      <details className="chart-data">
+        <summary>Read the price observations</summary>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Observed</th>
+                <th>Provider / deployment</th>
+                <th>Metric / source</th>
+                <th>USD / 1M tokens</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, index) => (
+                <tr
+                  key={`${row.deployment_id}-${row.observed_at}-${row.metric}-${index}`}
+                >
+                  <td>{date(row.observed_at)}</td>
+                  <td>
+                    {row.provider} · {row.deployment_id.slice(0, 8)}
+                  </td>
+                  <td>
+                    {row.metric.replaceAll("_", " ")} · {row.source}
+                  </td>
+                  <td>{money(row.amount)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </>
   );
 }

@@ -110,6 +110,7 @@ export function marketChange(event: MarketEvent) {
     direction,
     tone,
     percentage,
+    magnitude: delta == null ? null : Math.abs(Number(delta.toString())),
     label: field ? humanize(field) : humanize(event.event_type),
   };
 }

@@ -1,6 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
 
+import structlog
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -10,6 +11,7 @@ from fener.models import (
     BenchmarkResult,
     Deployment,
     DeploymentAlias,
+    Fact,
     MarketEvent,
     Model,
     ModelAlias,
@@ -19,6 +21,9 @@ from fener.models import (
     SourceRecord,
 )
 from fener.sources.contracts import NormalizedRecord
+from fener.value_comparison import equal_values
+
+log = structlog.get_logger()
 
 
 class CatalogWriter:
@@ -42,6 +47,38 @@ class CatalogWriter:
         }
         self.benchmarks = {r.id for r in session.scalars(select(BenchmarkDefinition))}
         self.results = {r.id for r in session.scalars(select(BenchmarkResult))}
+        # Values already observed during this sync. Several upstream entries can
+        # resolve to the same deployment (e.g. LiteLLM lists `gemini/exp-1206`
+        # and `gemini/gemini-exp-1206`); without this guard they overwrite each
+        # other every sync and emit contradictory change events forever.
+        self.sync_values: dict[tuple[str, str, str], object] = {}
+
+    def observe_once(
+        self,
+        entity_type: str,
+        entity_id: str,
+        field: str,
+        value: object,
+        record: SourceRecord,
+        authority: int,
+        verification: str,
+    ) -> tuple[Fact | None, bool]:
+        key = (entity_type, entity_id, field)
+        if key in self.sync_values:
+            if not equal_values(field, self.sync_values[key], value):
+                log.warning(
+                    "conflicting_source_entries_skipped",
+                    source_id=self.source_id,
+                    external_id=record.external_id,
+                    entity_type=entity_type,
+                    entity_id=entity_id,
+                    field=field,
+                )
+            return None, False
+        self.sync_values[key] = value
+        return self.evidence.observe(
+            entity_type, entity_id, field, value, record, authority, verification
+        )
 
     def provider(self, provider_id: str, name: str) -> None:
         if provider_id not in self.providers:
@@ -156,7 +193,7 @@ class CatalogWriter:
             # Deployment labels are evidence but cannot overwrite canonical model names.
             if field == "name" and not row.canonical and not new_model:
                 continue
-            _, update = self.evidence.observe(
+            _, update = self.observe_once(
                 "model", model.id, field, value, record, 60 if row.canonical else 20, "aggregated"
             )
             changed |= update
@@ -216,7 +253,7 @@ class CatalogWriter:
             verification = "official" if self.source_id == "openrouter" else "aggregated"
             deployment_facts = dict(row.deployment_facts)
             if row.provider_url:
-                self.evidence.observe(
+                self.observe_once(
                     "provider",
                     row.provider_id,
                     "documentation_url",
@@ -226,7 +263,7 @@ class CatalogWriter:
                     verification,
                 )
             for field, value in deployment_facts.items():
-                _, update = self.evidence.observe(
+                _, update = self.observe_once(
                     "deployment", deployment_id, field, value, record, authority, verification
                 )
                 changed |= update
@@ -238,7 +275,7 @@ class CatalogWriter:
                     "quantity": 1_000_000 if price.unit == "tokens" else 1,
                     "unit": price.unit,
                 }
-                fact, update = self.evidence.observe(
+                fact, update = self.observe_once(
                     "deployment",
                     deployment_id,
                     f"price.{price.metric}",
@@ -248,6 +285,7 @@ class CatalogWriter:
                     verification,
                 )
                 if update:
+                    assert fact is not None
                     self.session.add(
                         Price(
                             id=fact.id,

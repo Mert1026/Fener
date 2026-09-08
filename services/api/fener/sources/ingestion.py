@@ -157,6 +157,12 @@ def _sync(
         if not normalized:
             raise ValueError("Source returned an empty catalog; no canonical changes applied")
         writer = CatalogWriter(session, source_id, utcnow())
+        # Deterministic order, namespaced (canonical-form) entries first: when
+        # several upstream entries resolve to the same deployment, the same one
+        # must win on every sync or the values flip-flop between snapshots.
+        normalized.sort(
+            key=lambda item: (0 if "/" in item[0].external_id else 1, item[0].external_id)
+        )
         for row, snapshot_id, url in normalized:
             run.records_changed += int(writer.persist(row, snapshot_id, url))
         run.records_discovered = len(normalized)

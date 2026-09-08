@@ -1,0 +1,47 @@
+# Tailscale-only exposure for the containerized stack. The web UI keeps no
+# published port on the host: it joins the tailscale container's network
+# namespace, so it is reachable exclusively from your tailnet.
+#
+# Requires in .env:
+#   TS_AUTHKEY        an auth key from the Tailscale admin console
+#   TS_HOSTNAME       the device name inside your tailnet (default: fener)
+#   FENER_WEB_ORIGIN  the exact URL you will open in the browser,
+#                     e.g. http://fener:3000 (MagicDNS) — mutations are
+#                     rejected unless the Origin matches this value
+#
+# Run:
+#   docker compose -f compose.yaml -f compose.app.yaml -f compose.tailscale.yaml run --rm migrate
+#   docker compose -f compose.yaml -f compose.app.yaml -f compose.tailscale.yaml up -d
+services:
+  web:
+    ports: !override []
+    network_mode: "service:tailscale"
+    depends_on:
+      tailscale:
+        condition: service_healthy
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: fener-tailscale
+    environment:
+      TS_AUTHKEY: ${TS_AUTHKEY:?Add TS_AUTHKEY to .env (Tailscale admin console, Settings, Keys)}
+      TS_HOSTNAME: ${TS_HOSTNAME:-fener}
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_USERSPACE: "false"
+    volumes:
+      - tailscale_state:/var/lib/tailscale
+      # Lets tailscaled load netfilter modules so its local firewall rules
+      # (ts-input) install cleanly; without it the container logs iptables
+      # warnings and relies on tailnet-side ACL enforcement only.
+      - /lib/modules:/lib/modules:ro
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "tailscale", "status"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+volumes:
+  tailscale_state:

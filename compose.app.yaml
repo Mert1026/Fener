@@ -1,6 +1,7 @@
-# Optional API/worker containers. Web runs locally with pnpm dev.
+# Optional API/worker/web containers. The web UI can still run locally with pnpm dev.
 # First: docker compose -f compose.yaml -f compose.app.yaml run --rm migrate
-# Then: docker compose -f compose.yaml -f compose.app.yaml up -d api worker
+# Then: docker compose -f compose.yaml -f compose.app.yaml up -d api worker web
+# Tailscale-only exposure (no host ports for web): add -f compose.tailscale.yaml.
 services:
   migrate:
     build:
@@ -13,6 +14,7 @@ services:
       db:
         condition: service_healthy
   api:
+    restart: unless-stopped
     build:
       context: .
       dockerfile: infra/api.Dockerfile
@@ -36,6 +38,7 @@ services:
       timeout: 5s
       retries: 3
   worker:
+    restart: unless-stopped
     build:
       context: .
       dockerfile: infra/api.Dockerfile
@@ -44,8 +47,28 @@ services:
       DATABASE_URL: postgresql+psycopg://fener:${POSTGRES_PASSWORD:?Set the local database password}@db:5432/fener
     command: ["fener", "worker"]
     volumes: ["snapshots:/app/.data/snapshots"]
+  web:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: infra/web.Dockerfile
+    env_file: .env
+    environment:
+      FENER_API_URL: http://api:8000
+    ports: ["127.0.0.1:3000:3000"]
     depends_on:
       api:
         condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/').then((r) => { if (!r.ok) process.exit(1); }).catch(() => process.exit(1));",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 volumes:
   snapshots:

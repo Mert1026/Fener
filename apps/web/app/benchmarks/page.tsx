@@ -6,6 +6,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Info, Search, RefreshCw } from "lucide-react";
 import { api, isPrivateLocked, type Benchmark } from "@/lib/api";
 import { date } from "@/lib/format";
+import { requestId } from "@/lib/uuid";
+import { BenchmarkRange } from "@/components/analytics";
+import { SinceDigest } from "@/components/since-digest";
 import {
   Badge,
   Empty,
@@ -68,7 +71,7 @@ export default function BenchmarksPage() {
       api<RefreshState>("benchmark-refresh", {
         method: "POST",
         body: JSON.stringify({
-          request_id: crypto.randomUUID(),
+          request_id: requestId(),
           acknowledge_cost: true,
         }),
       }),
@@ -103,6 +106,7 @@ export default function BenchmarksPage() {
         title="Comparable model benchmarks."
         description="Fener reads the current Artificial Analysis Intelligence Index cohort directly. Only exact source-published model scores enter the comparison."
       />
+      <SinceDigest scope="models" />
       <section className="panel settings-panel" style={{ marginBottom: 20 }}>
         <div className="panel-header">
           <div>
@@ -284,85 +288,92 @@ export default function BenchmarksPage() {
                 ) : query.error ? (
                   <ErrorState error={query.error} retry={query.refetch} />
                 ) : (
-                  <div className="table-wrap">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>Model</th>
-                          <th>Reported score</th>
-                          <th>Methodology</th>
-                          <th>Original report</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {query.data?.map((row) => (
-                          <tr key={row.id}>
-                            <td>
-                              <Link href={`/models/${row.model_id}`}>
-                                {row.model_name}
-                              </Link>
-                            </td>
-                            <td>
-                              <strong className="benchmark-score mono">
-                                {new Decimal(row.score).toString()}
-                              </strong>
-                              <small className="benchmark-unit">
-                                {row.metric}
-                              </small>
-                            </td>
-                            <td>
-                              <Badge tone={row.comparable ? "good" : "warning"}>
-                                {row.comparable
-                                  ? "Same benchmark cohort"
-                                  : "Methodology incomplete"}
-                              </Badge>
-                              <details className="benchmark-issues">
-                                <summary>
-                                  {row.quality_issues.length
-                                    ? `${row.quality_issues.length} evidence gaps`
-                                    : "Methodology"}
-                                </summary>
-                                {row.quality_issues.map((issue) => (
-                                  <p key={issue}>{issue}</p>
-                                ))}
-                                <p>
-                                  Version:{" "}
-                                  {row.version.startsWith("unspecified:")
-                                    ? "Not supplied"
-                                    : row.version}
-                                </p>
-                                <p>Evaluator: {row.evaluator}</p>
-                                <p>Tested source variant: {row.source_title}</p>
-                              </details>
-                            </td>
-                            <td>
-                              {row.report_url ? (
-                                <SourceLink
-                                  source="View report"
-                                  url={row.report_url}
-                                />
-                              ) : (
-                                <span className="muted">
-                                  Report not identified
-                                </span>
-                              )}
-                              <small className="benchmark-unit">
-                                {row.reported_date
-                                  ? `Reported ${date(row.reported_date)}`
-                                  : "Report date unknown"}
-                              </small>
-                              {row.source_url !== row.report_url && (
-                                <SourceLink
-                                  source={`Via ${row.source}`}
-                                  url={row.source_url}
-                                />
-                              )}
-                            </td>
+                  <>
+                    {query.data && <BenchmarkRange rows={query.data} />}
+                    <div className="table-wrap">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Model</th>
+                            <th>Reported score</th>
+                            <th>Methodology</th>
+                            <th>Original report</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                        </thead>
+                        <tbody>
+                          {query.data?.map((row) => (
+                            <tr key={row.id}>
+                              <td>
+                                <Link href={`/models/${row.model_id}`}>
+                                  {row.model_name}
+                                </Link>
+                              </td>
+                              <td>
+                                <strong className="benchmark-score mono">
+                                  {new Decimal(row.score).toString()}
+                                </strong>
+                                <small className="benchmark-unit">
+                                  {row.metric}
+                                </small>
+                              </td>
+                              <td>
+                                <Badge
+                                  tone={row.comparable ? "good" : "warning"}
+                                >
+                                  {row.comparable
+                                    ? "Same benchmark cohort"
+                                    : "Methodology incomplete"}
+                                </Badge>
+                                <details className="benchmark-issues">
+                                  <summary>
+                                    {row.quality_issues.length
+                                      ? `${row.quality_issues.length} evidence gaps`
+                                      : "Methodology"}
+                                  </summary>
+                                  {row.quality_issues.map((issue) => (
+                                    <p key={issue}>{issue}</p>
+                                  ))}
+                                  <p>
+                                    Version:{" "}
+                                    {row.version.startsWith("unspecified:")
+                                      ? "Not supplied"
+                                      : row.version}
+                                  </p>
+                                  <p>Evaluator: {row.evaluator}</p>
+                                  <p>
+                                    Tested source variant: {row.source_title}
+                                  </p>
+                                </details>
+                              </td>
+                              <td>
+                                {row.report_url ? (
+                                  <SourceLink
+                                    source="View report"
+                                    url={row.report_url}
+                                  />
+                                ) : (
+                                  <span className="muted">
+                                    Report not identified
+                                  </span>
+                                )}
+                                <small className="benchmark-unit">
+                                  {row.reported_date
+                                    ? `Reported ${date(row.reported_date)}`
+                                    : "Report date unknown"}
+                                </small>
+                                {row.source_url !== row.report_url && (
+                                  <SourceLink
+                                    source={`Via ${row.source}`}
+                                    url={row.source_url}
+                                  />
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
                 )}
                 <div className="benchmark-pagination">
                   <span className="muted small">

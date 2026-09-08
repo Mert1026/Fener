@@ -28,6 +28,7 @@ next-env.d.ts
 .vscode/
 .DS_Store
 Thumbs.db
+.ai-harness
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -79,6 +80,9 @@ coverage.xml
 *.py.cover
 .hypothesis/
 .pytest_cache/
+.pytest-tmp*/
+.pytest-bt*/
+.gate-*.log
 cover/
 
 # Translations
@@ -246,3 +250,11 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+.ai-harness/state/decisions.jsonl
+/.ai-harness/state
+/.ai-harness/state
+*.jsonl
+*.json
+.ai-harness/state/decisions.jsonl
+/.ai-harness
+*.json
