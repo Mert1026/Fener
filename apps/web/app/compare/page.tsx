@@ -262,12 +262,18 @@ export default function ComparePage() {
               ))}
               <button
                 className="button primary"
-                disabled={cost.isPending}
+                disabled={cost.isPending || !deployments.some(Boolean)}
                 onClick={() => cost.mutate()}
               >
                 {cost.isPending ? "Calculating…" : "Calculate costs"}
               </button>
             </div>
+            {!deployments.some(Boolean) && (
+              <p className="chart-caption" role="status">
+                No serving deployments are available for these models. Choose
+                models with current provider listings to estimate a workload.
+              </p>
+            )}
             {cost.error && (
               <div className="panel-content">
                 <ErrorState error={cost.error} retry={() => cost.mutate()} />

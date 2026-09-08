@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowUpRight, Search } from "lucide-react";
 import { api, type Provider } from "@/lib/api";
+import { ProviderAnalytics } from "@/components/analytics";
 import { SinceDigest } from "@/components/since-digest";
 import {
   Badge,
@@ -51,36 +52,39 @@ export default function ProvidersPage() {
       ) : query.error ? (
         <ErrorState error={query.error} retry={query.refetch} />
       ) : rows?.length ? (
-        <div className="provider-grid">
-          {rows.map((provider) => (
-            <Link
-              className="panel provider-card"
-              href={`/providers/${encodeURIComponent(provider.id)}`}
-              key={provider.id}
-            >
-              <div className="provider-top">
-                <span className="model-avatar">
-                  {provider.name.slice(0, 2).toUpperCase()}
-                </span>
-                <ArrowUpRight size={15} className="muted" />
-              </div>
-              <h2>{provider.name}</h2>
-              <p>
-                {provider.deployment_count.toLocaleString()} catalog listings
-              </p>
-              <footer>
-                <span>{provider.id}</span>
-                <Badge
-                  tone={provider.kind === "marketplace" ? "blue" : "neutral"}
-                >
-                  {provider.kind === "marketplace"
-                    ? "Marketplace"
-                    : "Access provider"}
-                </Badge>
-              </footer>
-            </Link>
-          ))}
-        </div>
+        <>
+          <ProviderAnalytics providers={rows} />
+          <div className="provider-grid">
+            {rows.map((provider) => (
+              <Link
+                className="panel provider-card"
+                href={`/providers/${encodeURIComponent(provider.id)}`}
+                key={provider.id}
+              >
+                <div className="provider-top">
+                  <span className="model-avatar">
+                    {provider.name.slice(0, 2).toUpperCase()}
+                  </span>
+                  <ArrowUpRight size={15} className="muted" />
+                </div>
+                <h2>{provider.name}</h2>
+                <p>
+                  {provider.deployment_count.toLocaleString()} catalog listings
+                </p>
+                <footer>
+                  <span>{provider.id}</span>
+                  <Badge
+                    tone={provider.kind === "marketplace" ? "blue" : "neutral"}
+                  >
+                    {provider.kind === "marketplace"
+                      ? "Marketplace"
+                      : "Access provider"}
+                  </Badge>
+                </footer>
+              </Link>
+            ))}
+          </div>
+        </>
       ) : (
         <Empty>No providers match your search.</Empty>
       )}

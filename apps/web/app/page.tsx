@@ -14,6 +14,7 @@ import {
 import { api, type ModelPage, type Overview } from "@/lib/api";
 import { ModelTable } from "@/components/model-table";
 import { EventList } from "@/components/event-list";
+import { IntelligenceBrief, CatalogAnalytics } from "@/components/analytics";
 import { SinceDigest } from "@/components/since-digest";
 import { WatchlistPanel } from "@/components/watchlist-panel";
 import {
@@ -57,6 +58,7 @@ export default function OverviewPage() {
       ) : (
         data && (
           <>
+            <IntelligenceBrief data={data} />
             <div className="stats-grid">
               {[
                 {
@@ -97,7 +99,7 @@ export default function OverviewPage() {
               ))}
             </div>
             <div className="dashboard-grid">
-              <section className="panel span-all">
+              <section className="panel span-all landscape-panel">
                 <div className="panel-header">
                   <div>
                     <h2>Context meets cost</h2>
@@ -106,9 +108,13 @@ export default function OverviewPage() {
                       question.
                     </p>
                   </div>
-                  <span className="badge">LIVE CATALOG</span>
+                  <span className="badge">CATALOG SNAPSHOT</span>
                 </div>
-                {catalog.data?.items.length ? (
+                {catalog.isPending ? (
+                  <Loading />
+                ) : catalog.error ? (
+                  <ErrorState error={catalog.error} retry={catalog.refetch} />
+                ) : catalog.data?.items.length ? (
                   <ContextCostChart models={catalog.data.items} />
                 ) : (
                   <Empty>
@@ -116,8 +122,8 @@ export default function OverviewPage() {
                   </Empty>
                 )}
                 <div className="chart-caption">
-                  <span className="evidence-dot" /> Up to 100 models · lowest
-                  listed input rate · click a point to inspect
+                  <span className="evidence-dot" /> Up to 100 largest-context
+                  models · lowest listed input rate · click a point to inspect
                 </div>
               </section>
               <section className="panel">
@@ -137,6 +143,14 @@ export default function OverviewPage() {
                 )}
               </section>
               <WatchlistPanel />
+              {catalog.data && (
+                <div className="span-all">
+                  <CatalogAnalytics
+                    models={catalog.data.items}
+                    scope="100 largest-context models at most"
+                  />
+                </div>
+              )}
             </div>
             <div className="section-row">
               <div>

@@ -26,6 +26,7 @@ import {
   type FeedSort,
   type FeaturedMove,
 } from "@/lib/feed";
+import { SignalAnalytics } from "./analytics";
 import { Empty, ErrorState, SourceLink } from "./ui";
 
 const TABS = [
@@ -376,6 +377,7 @@ export function MarketFeed() {
           )}
         </section>
         <aside className="feed-rail" aria-label="Feed context">
+          <SignalAnalytics events={events} />
           <TrendingPanel events={events} />
           <section className="panel rail-panel watch-cta">
             <header className="rail-head">

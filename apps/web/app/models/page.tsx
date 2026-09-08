@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { api, type ModelPage, type Provider } from "@/lib/api";
+import { CatalogAnalytics } from "@/components/analytics";
 import { ModelTable } from "@/components/model-table";
 import { SinceDigest } from "@/components/since-digest";
 import {
@@ -26,7 +27,9 @@ function Explorer() {
     searchParams.get("min_context") ?? "0",
   );
   const [weights, setWeights] = useState(false);
-  const [unresolved, setUnresolved] = useState(false);
+  const [unresolved, setUnresolved] = useState(
+    searchParams.get("include_unresolved") === "true",
+  );
   const [sort, setSort] = useState("released");
   const [page, setPage] = useState(0);
   useEffect(() => {
@@ -169,7 +172,13 @@ function Explorer() {
       ) : query.error ? (
         <ErrorState error={query.error} retry={query.refetch} />
       ) : query.data?.items.length ? (
-        <ModelTable models={query.data.items} />
+        <>
+          <CatalogAnalytics
+            models={query.data.items}
+            scope={`Page ${page + 1} · current filters`}
+          />
+          <ModelTable models={query.data.items} />
+        </>
       ) : (
         <Empty title="No models match these filters">
           Try broadening the search or including unresolved source identities.
