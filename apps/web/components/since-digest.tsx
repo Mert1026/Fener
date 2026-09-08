@@ -1,7 +1,7 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { Clock3 } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { api, type MarketEvent } from "@/lib/api";
 import { visitBaseline } from "@/lib/since";
 
@@ -16,30 +16,29 @@ export type DigestScope = keyof typeof SCOPE_FILTERS;
 export function DigestCard({ events }: { events: MarketEvent[] }) {
   if (events.length === 0) return null;
   return (
-    <aside
-      className="panel since-digest"
-      aria-label="Changes since your last visit"
-    >
-      <div className="since-digest-head">
-        <span className="since-digest-title">
-          <Clock3 size={14} className="accent" />
-          <strong>
-            {events.length} market {events.length === 1 ? "change" : "changes"}{" "}
-            since your last visit
-          </strong>
-        </span>
-        <Link href="/market" className="since-digest-link">
-          Open the feed
-        </Link>
-      </div>
-      <ul className="since-digest-list">
+    <aside className="digest-tape" aria-label="Changes since your last visit">
+      <span className="digest-chip mono" aria-hidden>
+        {events.length}
+      </span>
+      <strong className="digest-label">
+        {events.length} market {events.length === 1 ? "change" : "changes"}{" "}
+        since your last visit
+      </strong>
+      <span className="digest-items">
         {events.slice(0, 3).map((event) => (
-          <li key={event.id}>
+          <Link
+            key={event.id}
+            className="digest-item"
+            href={event.model_id ? `/models/${event.model_id}` : "/market"}
+          >
             <span className="mono">{event.model_name ?? event.entity_id}</span>
-            <span className="muted"> — {event.title}</span>
-          </li>
+            <span>{event.title}</span>
+          </Link>
         ))}
-      </ul>
+      </span>
+      <Link className="digest-link" href="/market">
+        Open feed <ArrowUpRight size={12} />
+      </Link>
     </aside>
   );
 }

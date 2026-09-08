@@ -31,7 +31,7 @@ it("shows the change count and readable model entries", () => {
   ).toBeInTheDocument();
   expect(screen.getByText("Alpha")).toBeInTheDocument();
   expect(screen.getByText("Beta")).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Open the feed" })).toHaveAttribute(
+  expect(screen.getByRole("link", { name: "Open feed" })).toHaveAttribute(
     "href",
     "/market",
   );

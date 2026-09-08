@@ -97,7 +97,7 @@ export default function OverviewPage() {
               ))}
             </div>
             <div className="dashboard-grid">
-              <section className="panel">
+              <section className="panel span-all">
                 <div className="panel-header">
                   <div>
                     <h2>Context meets cost</h2>

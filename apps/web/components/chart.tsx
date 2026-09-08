@@ -45,16 +45,25 @@ export function ContextCostChart({ models }: { models: Model[] }) {
     const foreground = styles.getPropertyValue("--muted").trim();
     const accent = styles.getPropertyValue("--accent").trim();
     const border = styles.getPropertyValue("--border").trim();
-    const surface = styles.getPropertyValue("--surface").trim();
+    const aqua = styles.getPropertyValue("--aqua").trim();
     const data = models
       .filter(
         (row) => row.input_price_from !== null && row.context_window !== null,
       )
-      .map((row) => ({
-        name: row.name,
-        value: [Number(row.input_price_from), row.context_window! / 1000],
-        id: row.id,
-      }));
+      .map((row) => {
+        const price = Number(row.input_price_from);
+        return {
+          name: row.name,
+          free: price === 0,
+          // The price axis is logarithmic; free models plot at the axis
+          // floor and the aqua dot plus tooltip carry the truth.
+          value: [price > 0 ? price : 0.001, row.context_window! / 1000],
+          ...(price === 0
+            ? { itemStyle: { color: aqua, borderColor: aqua } }
+            : {}),
+          id: row.id,
+        };
+      });
     chart.setOption({
       animation: false,
       aria: {
@@ -65,53 +74,45 @@ export function ContextCostChart({ models }: { models: Model[] }) {
             "Zoomable scatter chart comparing model context windows with lowest listed input prices. Each dot opens a model. This is not a quality benchmark.",
         },
       },
-      grid: { left: 57, right: 53, top: 28, bottom: 85 },
-      dataZoom: [
-        ...ranges.current.map((range, index) => ({
-          id: range.dataZoomId,
-          type: "slider",
-          ...(index === 0
-            ? { xAxisIndex: 0, bottom: 15, height: 18, left: 57, right: 53 }
-            : { yAxisIndex: 0, right: 13, width: 16, top: 28, bottom: 85 }),
-          start: range.start,
-          end: range.end,
-          filterMode: "none",
-          minSpan: 0.01,
-          showDetail: false,
-          showDataShadow: false,
-          borderColor: border,
-          backgroundColor: surface,
-          fillerColor: resolvedTheme === "light" ? "#002d7226" : "#ffed0026",
-          handleStyle: { color: accent, borderColor: accent },
-          moveHandleStyle: { color: accent },
-          brushSelect: false,
-        })),
-        ...["xAxisIndex", "yAxisIndex"].map((axis) => ({
-          type: "inside",
-          [axis]: 0,
-          filterMode: "none",
-          minSpan: 0.01,
-          zoomOnMouseWheel: true,
-          moveOnMouseMove: true,
-          moveOnMouseWheel: false,
-        })),
-      ],
+      grid: { left: 64, right: 28, top: 30, bottom: 46 },
+      dataZoom: ranges.current.map((range, index) => ({
+        id: range.dataZoomId,
+        type: "inside",
+        ...(index === 0 ? { xAxisIndex: 0 } : { yAxisIndex: 0 }),
+        start: range.start,
+        end: range.end,
+        filterMode: "none",
+        minSpan: 0.01,
+        zoomOnMouseWheel: true,
+        moveOnMouseMove: true,
+        moveOnMouseWheel: false,
+      })),
       tooltip: {
         trigger: "item",
         renderMode: "richText",
         formatter: (p: unknown) => {
-          const point = p as { data: { name: string; value: number[] } };
-          return `${point.data.name}\nInput: $${point.data.value[0]} / 1M\nContext: ${point.data.value[1]}K`;
+          const point = p as {
+            data: { name: string; free?: boolean; value: number[] };
+          };
+          return `${point.data.name}\nInput: ${
+            point.data.free ? "free" : `$${point.data.value[0]} / 1M`
+          }\nContext: ${point.data.value[1]}K tokens`;
         },
       },
       xAxis: {
-        min: 0,
+        type: "log",
+        logBase: 10,
+        min: 0.001,
         max: Math.max(1, ...data.map((point) => point.value[0] * 1.05)),
-        name: "INPUT PRICE · USD / 1M",
+        name: "INPUT PRICE · USD / 1M · LOG",
         nameLocation: "middle",
-        nameGap: 31,
+        nameGap: 30,
         nameTextStyle: { fontSize: 9, color: foreground },
-        axisLabel: { fontSize: 9, color: foreground },
+        axisLabel: {
+          fontSize: 9,
+          color: foreground,
+          formatter: (v: number) => `$${v}`,
+        },
         splitLine: {
           lineStyle: { color: border, type: "dashed" },
         },
@@ -131,14 +132,16 @@ export function ContextCostChart({ models }: { models: Model[] }) {
       series: [
         {
           type: "scatter",
-          symbolSize: 8,
+          symbolSize: 9,
           itemStyle: {
             color: accent,
-            opacity: 0.75,
+            opacity: 0.8,
             borderColor: accent,
             borderWidth: 1,
+            shadowBlur: 7,
+            shadowColor: accent,
           },
-          emphasis: { scale: 1.5, itemStyle: { opacity: 1 } },
+          emphasis: { scale: 1.4, itemStyle: { opacity: 1, shadowBlur: 12 } },
           data,
         },
       ],
@@ -205,8 +208,8 @@ export function ContextCostChart({ models }: { models: Model[] }) {
           {zoom}
         </span>
         <p className="chart-help" id="context-cost-help">
-          Scroll or pinch to zoom, drag to pan, or adjust either axis with its
-          slider. Identical values still overlap.
+          Scroll or pinch to zoom · drag to pan · click a dot to open the model.
+          Free models sit on the axis floor in aqua.
         </p>
       </div>
       <div
