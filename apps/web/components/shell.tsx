@@ -26,6 +26,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { api, type ModelPage } from "@/lib/api";
 import { useCompare } from "@/lib/compare-store";
+import { RefreshCountdown } from "./refresh-countdown";
 
 const navigation = [
   {
@@ -233,6 +234,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <strong>{current?.name ?? "Evidence"}</strong>
           </div>
           <div className="topbar-actions">
+            <RefreshCountdown />
             <span className="live-label">
               <span className="status-dot" /> SOURCE-BACKED DATA
             </span>
