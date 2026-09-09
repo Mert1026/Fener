@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { Check, Copy } from "lucide-react";
+import Link from "next/link";
+import { Check, Copy, ExternalLink } from "lucide-react";
 import type { Deployment } from "@/lib/api";
 import { money, tokens } from "@/lib/format";
 import { DeploymentAnalytics } from "./analytics";
@@ -31,12 +32,42 @@ export function DeploymentTable({
             {deployments.map((row) => (
               <tr key={row.id}>
                 <td>
-                  <strong>{row.access_provider}</strong>
+                  <strong>
+                    {row.provider_url ? (
+                      <a
+                        className="provider-link"
+                        href={row.provider_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        title={`Open ${row.access_provider} documentation`}
+                      >
+                        {row.access_provider}
+                        <ExternalLink size={11} aria-hidden />
+                      </a>
+                    ) : (
+                      <Link
+                        className="provider-link"
+                        href={`/providers/${row.access_provider}`}
+                        title={`Open ${row.access_provider} in Fener`}
+                      >
+                        {row.access_provider}
+                      </Link>
+                    )}
+                  </strong>
                   <small
                     className="muted"
                     style={{ display: "block", marginTop: 5 }}
                   >
-                    {row.upstream_provider ?? "Upstream unknown"}
+                    {row.upstream_provider ? (
+                      <Link
+                        className="provider-link muted-link"
+                        href={`/providers/${row.upstream_provider}`}
+                      >
+                        {row.upstream_provider}
+                      </Link>
+                    ) : (
+                      "Upstream unknown"
+                    )}
                   </small>
                   {row.listing_kind === "routing_quote" && (
                     <Badge tone="warning">Routing quote</Badge>

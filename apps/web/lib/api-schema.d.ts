@@ -649,6 +649,8 @@ export interface components {
       identity_status: string;
       /** Access Provider */
       access_provider: string;
+      /** Provider Url */
+      provider_url?: string | null;
       /** Upstream Provider */
       upstream_provider: string | null;
       /** Api Model Id */
