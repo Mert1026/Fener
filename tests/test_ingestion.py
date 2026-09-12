@@ -138,8 +138,7 @@ def test_duplicate_entries_within_one_sync_do_not_flip_flop(session):
 
     assert session.scalar(select(func.count()).select_from(Price)) == 1
     assert (
-        session.scalar(select(func.count()).select_from(Fact).where(Fact.field == "max_input"))
-        == 1
+        session.scalar(select(func.count()).select_from(Fact).where(Fact.field == "max_input")) == 1
     )
     assert session.scalar(select(func.count()).select_from(MarketEvent)) == first_sync_events
 

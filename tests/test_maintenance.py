@@ -72,9 +72,7 @@ def test_purge_removes_flip_flop_artifacts_and_keeps_tip(session):
 
     # Only the tip of each conflicted chain survives; the legitimate later
     # observation and its event stay.
-    price_facts = session.scalars(
-        select(Fact).where(Fact.field == "price.output_tokens")
-    ).all()
+    price_facts = session.scalars(select(Fact).where(Fact.field == "price.output_tokens")).all()
     assert len(price_facts) == 1
     assert price_facts[0].value["amount"] == "0"
     flip_events = session.scalars(
