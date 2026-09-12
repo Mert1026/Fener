@@ -39,19 +39,14 @@ def purge_concurrent_conflict_artifacts(connection: Connection) -> int:
     full provenance of every removed observation remains auditable.
     """
     facts = connection.execute(
-        text(
-            "SELECT id, entity_type, entity_id, field, value, observed_at"
-            " FROM fact_observations"
-        )
+        text("SELECT id, entity_type, entity_id, field, value, observed_at FROM fact_observations")
     ).fetchall()
 
     groups: dict[tuple[str, str, str, str], list[tuple[str, str]]] = defaultdict(list)
     meta: dict[str, tuple[str, str, str, Any]] = {}
     for fact_id, entity_type, entity_id, field, value, observed_at in facts:
         moment = _moment(observed_at)
-        groups[(entity_type, entity_id, field, moment)].append(
-            (fact_id, _canonical(value))
-        )
+        groups[(entity_type, entity_id, field, moment)].append((fact_id, _canonical(value)))
         meta[fact_id] = (entity_type, entity_id, field, observed_at)
 
     conflicted: set[str] = set()
@@ -62,9 +57,7 @@ def purge_concurrent_conflict_artifacts(connection: Connection) -> int:
         return 0
 
     # The displayed value always survives; conflicting half-writes do not.
-    current = connection.execute(
-        text("SELECT observation_id FROM current_facts")
-    ).fetchall()
+    current = connection.execute(text("SELECT observation_id FROM current_facts")).fetchall()
     removed = conflicted - {row[0] for row in current}
     if not removed:
         return 0
@@ -74,8 +67,7 @@ def purge_concurrent_conflict_artifacts(connection: Connection) -> int:
     # Cross-source conflict records that referenced the deleted halves.
     connection.execute(
         text(
-            "DELETE FROM source_conflicts"
-            " WHERE observation_a IN :ids OR observation_b IN :ids"
+            "DELETE FROM source_conflicts WHERE observation_a IN :ids OR observation_b IN :ids"
         ).bindparams(bindparam("ids", expanding=True)),
         {"ids": sorted(removed)},
     )
@@ -89,10 +81,7 @@ def purge_concurrent_conflict_artifacts(connection: Connection) -> int:
     # Market events announcing a deleted half-write: same entity, same field
     # title, same instant, and a new value equal to the deleted fact's value.
     events = connection.execute(
-        text(
-            "SELECT id, entity_type, entity_id, title, detected_at, new_value"
-            " FROM market_events"
-        )
+        text("SELECT id, entity_type, entity_id, title, detected_at, new_value FROM market_events")
     ).fetchall()
     event_index: dict[tuple[str, str, str, str], list[tuple[str, str]]] = defaultdict(list)
     for event_id, entity_type, entity_id, title, detected_at, new_value in events:
@@ -100,8 +89,17 @@ def purge_concurrent_conflict_artifacts(connection: Connection) -> int:
         event_index[event_key].append((event_id, _canonical(new_value)))
     doomed_events: set[str] = set()
     for fact_id, (entity_type, entity_id, field, observed_at) in removed_meta.items():
-        value = next(v for i, v in groups[(entity_type, entity_id, field, _moment(observed_at))] if i == fact_id)
-        event_key = (entity_type, entity_id, f"{field.replace('_', ' ')} changed", _moment(observed_at))
+        value = next(
+            v
+            for i, v in groups[(entity_type, entity_id, field, _moment(observed_at))]
+            if i == fact_id
+        )
+        event_key = (
+            entity_type,
+            entity_id,
+            f"{field.replace('_', ' ')} changed",
+            _moment(observed_at),
+        )
         for event_id, event_value in event_index.get(event_key, []):
             if event_value == value:
                 doomed_events.add(event_id)

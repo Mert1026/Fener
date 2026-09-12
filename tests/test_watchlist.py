@@ -87,6 +87,31 @@ def _price_event(session: Session, record_id: str, deployment_id: str, detected_
     return event
 
 
+def _price_event_with_values(
+    session: Session,
+    record_id: str,
+    deployment_id: str,
+    detected_at: datetime,
+    title: str,
+    old_value: dict,
+    new_value: dict,
+):
+    event = MarketEvent(
+        id=str(uuid4()),
+        event_type="price_change",
+        entity_type="deployment",
+        entity_id=deployment_id,
+        title=title,
+        old_value=old_value,
+        new_value=new_value,
+        source_record_id=record_id,
+        importance="low",
+        detected_at=detected_at,
+    )
+    session.add(event)
+    return event
+
+
 def _configure_telegram(monkeypatch, sent: list):
     monkeypatch.setattr(settings(), "fener_telegram_bot_token", SecretStr("bot-token"))
     monkeypatch.setattr(settings(), "fener_telegram_chat_id", "chat-1")
@@ -209,6 +234,107 @@ def test_failed_send_keeps_watermark(client, monkeypatch):
         )
         assert notify_watchlist(session, settings()) == 1
         assert len(sent) == 1
+
+
+def test_notifications_group_metrics_into_one_readable_line(client, monkeypatch):
+    # One logical price change emits one event per metric; the digest must
+    # collapse them into a single labelled line instead of N confusing texts.
+    sent: list[tuple[str, str, str]] = []
+    _configure_telegram(monkeypatch, sent)
+    with Session(client.test_engine) as session:
+        record = _seed_evidence(session)
+        _watched_model(session, "m-6")
+        session.add(WatchlistItem(id="watch-6", model_id="m-6"))
+        base = datetime.now(UTC)
+
+        def full(amount: str) -> dict:
+            return {
+                "amount": amount,
+                "currency": "USD",
+                "quantity": 1_000_000,
+                "unit": "tokens",
+            }
+
+        _price_event_with_values(
+            session,
+            record.id,
+            "dep-m-6",
+            base,
+            "price input changed",
+            full("2.50"),
+            full("1.75"),
+        )
+        _price_event_with_values(
+            session,
+            record.id,
+            "dep-m-6",
+            base,
+            "price output changed",
+            full("10.00"),
+            full("12.00"),
+        )
+        # Stale duplicate of the same input move: only the latest line survives.
+        _price_event_with_values(
+            session,
+            record.id,
+            "dep-m-6",
+            base - timedelta(seconds=1),
+            "price input changed",
+            full("2.50"),
+            full("1.75"),
+        )
+        # Formatting-only noise (same rate, per-token vs per-1M view): hidden.
+        _price_event_with_values(
+            session,
+            record.id,
+            "dep-m-6",
+            base,
+            "price cached_input changed",
+            {"amount": "0.25", "currency": "USD", "quantity": 1, "unit": "tokens"},
+            {"amount": "250000", "currency": "USD", "quantity": 1_000_000, "unit": "tokens"},
+        )
+        session.commit()
+
+        delivered = notify_watchlist(session, settings())
+        assert delivered == 2
+        assert len(sent) == 1
+        text = sent[0][2]
+        assert text.startswith("Price update on your watchlist")
+        assert "hidden" in text
+        assert text.count("Test model m-6") == 1
+        assert "input $2.50/1M\u2192$1.75/1M" in text
+        assert "output $10.00/1M\u2192$12.00/1M" in text
+        assert "cached" not in text
+        assert "\u25bc -30.0%" in text
+        assert "\u25b2 +20.0%" in text
+
+        # Watermark consumed everything: no repeat message on the next pass.
+        assert notify_watchlist(session, settings()) == 0
+        assert len(sent) == 1
+
+
+def test_notifications_silently_skip_noise_only_pass(client, monkeypatch):
+    sent: list[tuple[str, str, str]] = []
+    _configure_telegram(monkeypatch, sent)
+    with Session(client.test_engine) as session:
+        record = _seed_evidence(session)
+        _watched_model(session, "m-7")
+        session.add(WatchlistItem(id="watch-7", model_id="m-7"))
+        _price_event_with_values(
+            session,
+            record.id,
+            "dep-m-7",
+            datetime.now(UTC),
+            "price input changed",
+            {"amount": "0.25", "currency": "USD", "quantity": 1, "unit": "tokens"},
+            {"amount": "250000", "currency": "USD", "quantity": 1_000_000, "unit": "tokens"},
+        )
+        session.commit()
+
+        assert notify_watchlist(session, settings()) == 0
+        assert sent == []
+        assert session.get(NotificationCursor, "telegram") is not None
+        assert notify_watchlist(session, settings()) == 0
 
 
 def test_market_events_since_filter(client):
